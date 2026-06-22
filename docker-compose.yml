@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - kivi_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.production
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - static_files:/app/staticfiles
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+        NEXT_PUBLIC_COMPANY_NAME: ${COMPANY_NAME}
+        NEXT_PUBLIC_COMPANY_SHORT_NAME: ${COMPANY_SHORT_NAME}
+        NEXT_PUBLIC_COMPANY_TAGLINE: ${COMPANY_TAGLINE}
+        NEXT_PUBLIC_COMPANY_DESCRIPTION: ${COMPANY_DESCRIPTION}
+        NEXT_PUBLIC_COMPANY_EMAIL: ${COMPANY_EMAIL}
+        NEXT_PUBLIC_COMPANY_PHONE: ${COMPANY_PHONE_NUMBER}
+        NEXT_PUBLIC_COMPANY_WHATSAPP: ${COMPANY_WHATSAPP_NUMBER}
+        NEXT_PUBLIC_COMPANY_ADDRESS: ${COMPANY_STREET_ADDRESS}
+        NEXT_PUBLIC_COMPANY_CITY: ${COMPANY_CITY}
+        NEXT_PUBLIC_COMPANY_COUNTRY: ${COMPANY_COUNTRY}
+        NEXT_PUBLIC_COMPANY_OPENING_HOURS: ${COMPANY_OPENING_HOURS}
+        NEXT_PUBLIC_DEFAULT_KEYWORDS: ${DEFAULT_KEYWORDS}
+        NEXT_PUBLIC_LINKEDIN_URL: ${LINKEDIN_URL}
+        NEXT_PUBLIC_FACEBOOK_URL: ${FACEBOOK_URL}
+        NEXT_PUBLIC_INSTAGRAM_URL: ${INSTAGRAM_URL}
+        NEXT_PUBLIC_TWITTER_URL: ${TWITTER_URL}
+        NEXT_PUBLIC_GA_ID: ${NEXT_PUBLIC_GA_ID}
+        NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION: ${NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION}
+    env_file: .env
+    environment:
+      INTERNAL_API_URL: http://backend:8000/api
+    depends_on:
+      - backend
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - static_files:/static
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+    depends_on:
+      - frontend
+      - backend
+
+volumes:
+  kivi_pgdata:
+  static_files:

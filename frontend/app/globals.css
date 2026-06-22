@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --kivi-navy:       #002040;   /* Primary dark — dominant logo color */
+  --kivi-cyan:       #00A0C0;   /* Accent — logo cyan/teal */
+  --kivi-cyan-light: #00A0E0;   /* Hover/active variant */
+  --kivi-white:      #F4F7FA;   /* Off-white backgrounds */
+  --kivi-slate:      #0D1B2A;   /* Deepest dark — hero sections */
+  --kivi-gray:       #606060;   /* Secondary text */
+  --kivi-gray-light: #E8EEF4;   /* Borders, dividers */
+  --kivi-surface:    #081525;   /* Dark card backgrounds */
+}
+
+body {
+  background-color: var(--kivi-white);
+  color: var(--kivi-gray);
+  font-family: var(--font-inter), sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+/* Custom transitions and scroll behaviors */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Admin layout custom styles */
+.admin-sidebar {
+  background-color: var(--kivi-surface);
+  border-right: 1px solid var(--kivi-gray-light);
+}
+
+.font-display {
+  font-family: var(--font-syne), sans-serif;
+}
+
+.font-mono {
+  font-family: var(--font-jetbrains-mono), monospace;
+}
