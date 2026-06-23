@@ -26,10 +26,21 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE.url),
   title: `${SITE.name} — ${SITE.tagline}`,
   description: SITE.description,
   verification: {
     google: SITE.analytics.siteVerification,
+  },
+  icons: {
+    icon: '/kivi.jpeg',
+    shortcut: '/kivi.jpeg',
+    apple: '/kivi.jpeg',
+  },
+  openGraph: {
+    title: `${SITE.name} — ${SITE.tagline}`,
+    description: SITE.description,
+    images: [{ url: '/kivi.jpeg' }],
   },
 }
 

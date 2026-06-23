@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { Menu, X, ArrowRight, Activity } from 'lucide-react'
+import { Menu, X, ArrowRight } from 'lucide-react'
 import { SITE } from '@/lib/constants'
 
 export default function Navbar() {
@@ -29,16 +30,23 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-20">
           {/* Logo / Brand */}
           <div className="flex-shrink-0 flex items-center gap-2">
-            <Link href="/" className="flex items-center gap-2 group">
-              <div className="bg-[#00A0C0] p-2 rounded-sm text-[#002040] group-hover:bg-[#00A0E0] transition-colors">
-                <Activity size={24} strokeWidth={2.5} />
+            <Link href="/" className="flex items-center gap-3 group">
+              <div className="relative w-10 h-10 rounded-full overflow-hidden ring-2 ring-[#00A0C0]/40 group-hover:ring-[#00A0C0] transition-all duration-300 flex-shrink-0">
+                <Image
+                  src="/kivi.jpeg"
+                  alt="Kivi Chemicals Logo"
+                  fill
+                  sizes="40px"
+                  className="object-cover"
+                  priority
+                />
               </div>
               <div className="flex flex-col">
                 <span className="font-display font-extrabold text-xl tracking-tight leading-none text-[#F4F7FA]">
                   {SITE.shortName.toUpperCase()}
                 </span>
                 <span className="text-[10px] text-[#00A0C0] uppercase tracking-wider font-bold">
-                  Chemicals & Solvents
+                  Chemicals &amp; Solvents
                 </span>
               </div>
             </Link>
