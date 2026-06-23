@@ -22,8 +22,10 @@ dist/
 downloads/
 eggs/
 .lib/
-lib/
-lib64/
+backend/lib/
+backend/lib64/
+# Ensure frontend source lib is never ignored
+!frontend/lib/
 parts/
 sdist/
 var/
