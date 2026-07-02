@@ -37,9 +37,17 @@ export interface Product {
   is_featured: boolean
   in_stock: boolean
   ai_generated: boolean
+  purity?: string
+  packaging?: any
+  sds_pdf?: string
+  datasheet_pdf?: string
+  alt_text?: string
+  view_count?: number
+  quote_request_count?: number
   created_at: string
   updated_at: string
 }
+
 
 export interface SiteSetting {
   id: number
@@ -75,7 +83,11 @@ export interface BlogPost {
   keywords: string
   created_at: string
   updated_at: string
+  reading_time?: number
+  ai_generated?: boolean
+  published_at?: string
 }
+
 
 export interface ContactSubmission {
   id?: number

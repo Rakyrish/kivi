@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework.authtoken.views import obtain_auth_token
-from apps.seo.views import SitemapView, RobotsView
+from apps.seo.views import SitemapView, RobotsView, SEOAuditView
 
 urlpatterns = [
     path('django-admin/', admin.site.urls),
@@ -12,4 +12,8 @@ urlpatterns = [
     path('api/blog/', include('apps.blog.urls')),
     path('api/contacts/', include('apps.contacts.urls')),
     path('api/ai/', include('apps.ai_generator.urls')),
+    path('api/leads/', include('apps.leads.urls')),
+    path('api/analytics/', include('apps.analytics.urls')),
+    path('api/seo/audit/', SEOAuditView.as_view(), name='seo-audit'),
 ]
+

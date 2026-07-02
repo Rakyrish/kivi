@@ -9,13 +9,6 @@ export const metadata: Metadata = buildMetadata({
   path: '/about',
 })
 
-const milestones = [
-  { year: '2014', label: 'Founded in Nairobi, Kenya with a mission to supply verified industrial-grade chemicals across East Africa.' },
-  { year: '2017', label: 'Expanded warehousing infrastructure to Mombasa port for coastal supply chain access.' },
-  { year: '2019', label: 'Achieved ISO 9001:2015 quality management system certification for all distribution channels.' },
-  { year: '2022', label: 'Surpassed 1,000 active business clients across Kenya, Uganda, Tanzania, and Rwanda.' },
-  { year: '2025', label: 'Launched digital procurement platform enabling seamless online product ordering and quote requests.' },
-]
 
 const values = [
   {
@@ -95,7 +88,7 @@ export default function AboutPage() {
               { stat: '150+', label: 'Chemicals in Stock' },
               { stat: '1,200+', label: 'Active B2B Clients' },
               { stat: '5+', label: 'Countries Served' },
-              { stat: '10+', label: 'Years in Business' },
+              { stat: '13+', label: 'Categories' },
             ].map(({ stat, label }) => (
               <div key={label} className="bg-[#002040] border border-[#00A0C0]/20 p-6 rounded-[4px] text-center">
                 <div className="font-display font-black text-3xl text-[#00A0C0] font-mono">{stat}</div>
@@ -130,23 +123,7 @@ export default function AboutPage() {
       </section>
 
       {/* Timeline */}
-      <section className="py-20 bg-[#081525] text-[#F4F7FA] border-b border-[#00A0C0]/10">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-14">
-            <div className="text-[10px] uppercase font-bold tracking-widest text-[#00A0C0] mb-2">Company History</div>
-            <h2 className="font-display font-black text-2xl md:text-3xl uppercase tracking-wide">Milestones</h2>
-          </div>
-          <div className="relative border-l border-[#00A0C0]/25 ml-6 space-y-8">
-            {milestones.map(({ year, label }) => (
-              <div key={year} className="relative pl-8">
-                <div className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-[#00A0C0] border-2 border-[#081525]" />
-                <div className="text-[10px] font-mono font-bold text-[#00A0C0] uppercase tracking-widest mb-1">{year}</div>
-                <p className="text-xs text-[#94A3B8] leading-relaxed">{label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+
     </div>
   )
 }

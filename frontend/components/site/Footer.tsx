@@ -1,17 +1,17 @@
 import Link from 'next/link'
-import { Mail, Phone, MapPin, Clock, Linkedin, Facebook, Twitter, Lock } from 'lucide-react'
-import { SITE } from '@/lib/constants'
+import { Mail, Phone, MapPin, Clock, Linkedin, Facebook, Twitter, ShieldCheck } from 'lucide-react'
+import { ROUTES, SITE } from '@/lib/constants'
 
 export default function Footer() {
   const currentYear = new Date().getFullYear()
 
   return (
-    <footer className="bg-[#081525] border-t border-[#00A0C0]/15 text-[#94A3B8] pt-16 pb-8">
+    <footer className="site-footer bg-[#081525] border-t border-[#00A0C0]/15 text-[#94A3B8] pt-16 pb-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
           {/* Company Brief */}
           <div className="space-y-4">
-            <span className="font-display font-black text-2xl tracking-tight text-[#F4F7FA]">
+            <span className="footer-brand font-display text-2xl tracking-tight text-[#F4F7FA]">
               {SITE.shortName.toUpperCase()}
             </span>
             <p className="text-xs leading-relaxed max-w-sm">
@@ -38,7 +38,7 @@ export default function Footer() {
 
           {/* Contact Details */}
           <div className="space-y-4">
-            <h4 className="font-display font-bold text-sm text-[#F4F7FA] uppercase tracking-wider">Contact Info</h4>
+            <h4 className="footer-heading font-display text-sm text-[#F4F7FA] uppercase tracking-wider">Contact Info</h4>
             <ul className="space-y-3 text-xs">
               <li className="flex items-start gap-3">
                 <MapPin size={16} className="text-[#00A0C0] flex-shrink-0 mt-0.5" />
@@ -65,41 +65,40 @@ export default function Footer() {
 
           {/* Navigation Links */}
           <div className="space-y-4">
-            <h4 className="font-display font-bold text-sm text-[#F4F7FA] uppercase tracking-wider">Quick Links</h4>
+            <h4 className="footer-heading font-display text-sm text-[#F4F7FA] uppercase tracking-wider">Procurement</h4>
             <ul className="space-y-2.5 text-xs">
               <li>
-                <Link href="/" className="hover:text-[#00A0C0] transition-colors">Home</Link>
+                <Link href={ROUTES.products} className="hover:text-[#00A0C0] transition-colors">Product Catalogue</Link>
               </li>
               <li>
-                <Link href="/products" className="hover:text-[#00A0C0] transition-colors">Product Catalogue</Link>
+                <Link href={`${ROUTES.products}#categories`} className="hover:text-[#00A0C0] transition-colors">Chemical Categories</Link>
               </li>
               <li>
-                <Link href="/blog" className="hover:text-[#00A0C0] transition-colors">Industry Updates</Link>
+                <Link href={ROUTES.blog} className="hover:text-[#00A0C0] transition-colors">Kivi Insights</Link>
               </li>
               <li>
-                <Link href="/about" className="hover:text-[#00A0C0] transition-colors">About Kivi Chemicals</Link>
+                <Link href={ROUTES.about} className="hover:text-[#00A0C0] transition-colors">About Kivi Chemicals</Link>
               </li>
               <li>
-                <Link href="/contact" className="hover:text-[#00A0C0] transition-colors">Get in Touch</Link>
+                <Link href={ROUTES.contact} className="hover:text-[#00A0C0] transition-colors">Request Quote</Link>
               </li>
             </ul>
           </div>
 
-          {/* Legal / Admin */}
+          {/* Certifications */}
           <div className="space-y-4">
-            <h4 className="font-display font-bold text-sm text-[#F4F7FA] uppercase tracking-wider">Operations</h4>
+            <h4 className="footer-heading font-display text-sm text-[#F4F7FA] uppercase tracking-wider">Certifications</h4>
             <p className="text-xs leading-relaxed">
-              Targeted logistics infrastructure delivering chemical solutions across Kenya and the East Africa region.
+              Procurement documentation, batch traceability, SDS support, and industrial-grade quality controls for commercial buyers.
             </p>
-            <div className="pt-2">
-              <Link
-                href="/admin/dashboard"
-                className="inline-flex items-center gap-2 text-xs font-semibold text-[#00A0C0] hover:text-[#00A0E0] transition-colors"
-              >
-                <Lock size={12} />
-                Portal Sign In
-              </Link>
-            </div>
+            <ul className="space-y-2 text-xs">
+              {['Quality Assured Supply', 'Safety Data Sheet Support', 'Industrial Grade Products'].map((item) => (
+                <li key={item} className="flex items-center gap-2">
+                  <ShieldCheck size={14} className="text-[#00A0C0]" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
 
@@ -109,8 +108,8 @@ export default function Footer() {
             &copy; {currentYear} {SITE.name}. All rights reserved.
           </div>
           <div className="flex space-x-6">
-            <Link href="/about" className="hover:text-[#94A3B8] transition-colors">Privacy Policy</Link>
-            <Link href="/contact" className="hover:text-[#94A3B8] transition-colors">Terms of Service</Link>
+            <Link href={ROUTES.about} className="hover:text-[#94A3B8] transition-colors">Privacy Policy</Link>
+            <Link href={ROUTES.contact} className="hover:text-[#94A3B8] transition-colors">Terms of Service</Link>
           </div>
         </div>
       </div>

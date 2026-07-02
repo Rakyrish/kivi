@@ -79,6 +79,34 @@ services:
       - frontend
       - backend
 
+  celery-worker:
+    build: ./backend
+    restart: unless-stopped
+    entrypoint: []
+    command: celery -A config worker -l info
+    env_file: .env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.production
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  celery-beat:
+    build: ./backend
+    restart: unless-stopped
+    entrypoint: []
+    command: celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    env_file: .env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.production
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
 volumes:
   kivi_pgdata:
   static_files:

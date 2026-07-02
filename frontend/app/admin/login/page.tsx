@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, FormEvent } from 'react'
+import { useEffect, useState, FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { Lock, Loader2, AlertCircle, Activity } from 'lucide-react'
 import { api } from '@/lib/api'
-import { SITE } from '@/lib/constants'
+import { ROUTES, SITE } from '@/lib/constants'
 
 export default function AdminLoginPage() {
   const [username, setUsername] = useState('')
@@ -12,6 +12,13 @@ export default function AdminLoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
+
+  useEffect(() => {
+    const match = document.cookie.match(/(?:^|; )admin_token=([^;]*)/)
+    if (match?.[1]) {
+      router.replace(ROUTES.admin.dashboard)
+    }
+  }, [router])
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -22,7 +29,7 @@ export default function AdminLoginPage() {
       const { token } = await api.login(username, password)
       // Store token in a secure, HTTP-only-like cookie
       document.cookie = `admin_token=${token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Strict`
-      router.push('/admin/dashboard')
+      router.replace(ROUTES.admin.dashboard)
     } catch (err: any) {
       setError('Invalid credentials. Please try again.')
     } finally {

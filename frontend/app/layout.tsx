@@ -1,34 +1,43 @@
 import { Metadata } from 'next'
-import { Syne, Inter, JetBrains_Mono } from 'next/font/google'
+import { Alice, JetBrains_Mono } from 'next/font/google'
 import Script from 'next/script'
 import { SITE } from '@/lib/constants'
 import './globals.css'
 
-const syne = Syne({
+const alice = Alice({
   subsets: ['latin'],
-  variable: '--font-syne',
-  weight: ['700', '800'],
+  variable: '--font-alice',
+  weight: '400',
   display: 'swap',
+  preload: true,
 })
 
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-inter',
-  weight: ['400', '500', '600', '700'],
-  display: 'swap',
-})
-
+// ── Data / Mono Face: JetBrains Mono ──
+// For CAS numbers, molecular weights, purity %, UN codes, chemical formulas
 const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
   variable: '--font-jetbrains-mono',
   weight: ['400', '700'],
   display: 'swap',
+  preload: false, // Below-the-fold — don't block first paint
 })
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
-  title: `${SITE.name} — ${SITE.tagline}`,
+  title: {
+    default: `${SITE.name} — ${SITE.tagline}`,
+    template: `%s | ${SITE.shortName}`,
+  },
   description: SITE.description,
+  keywords: SITE.keywords,
+  authors: [{ name: SITE.name }],
+  creator: SITE.name,
+  publisher: SITE.name,
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true },
+  },
   verification: {
     google: SITE.analytics.siteVerification,
   },
@@ -38,9 +47,26 @@ export const metadata: Metadata = {
     apple: '/kivi.jpeg',
   },
   openGraph: {
+    type: 'website',
+    locale: 'en_KE',
+    siteName: SITE.name,
     title: `${SITE.name} — ${SITE.tagline}`,
     description: SITE.description,
-    images: [{ url: '/kivi.jpeg' }],
+    images: [
+      {
+        url: '/kivi.jpeg',
+        width: 1200,
+        height: 630,
+        alt: `${SITE.name} — ${SITE.tagline}`,
+      }
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: `${SITE.name} — ${SITE.tagline}`,
+    description: SITE.description,
+    images: ['/kivi.jpeg'],
+    creator: SITE.social.twitter || '@kivichemicals',
   },
 }
 
@@ -50,9 +76,28 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${syne.variable} ${inter.variable} ${jetbrainsMono.variable}`}>
-      <body className="antialiased min-h-screen flex flex-col bg-[#F4F7FA]">
+    <html
+      lang="en"
+      className={`${alice.variable} ${jetbrainsMono.variable}`}
+      suppressHydrationWarning
+    >
+      <body className="antialiased min-h-screen flex flex-col bg-kivi-white font-sans">
+        <Script id="kivi-theme-init" strategy="beforeInteractive">
+          {`
+            (function () {
+              try {
+                var stored = localStorage.getItem('kivi-theme');
+                var preferred = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+                document.documentElement.dataset.theme = stored || preferred;
+              } catch (error) {
+                document.documentElement.dataset.theme = 'dark';
+              }
+            })();
+          `}
+        </Script>
         {children}
+
+        {/* Google Analytics — loads after interactive, never blocks rendering */}
         {SITE.analytics.gaId && (
           <>
             <Script
@@ -66,6 +111,7 @@ export default function RootLayout({
                 gtag('js', new Date());
                 gtag('config', '${SITE.analytics.gaId}', {
                   page_path: window.location.pathname,
+                  anonymize_ip: true
                 });
               `}
             </Script>

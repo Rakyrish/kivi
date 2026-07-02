@@ -1,8 +1,22 @@
-import { API_URL, INTERNAL_API_URL } from './constants'
+import { API_ENDPOINTS, API_URL, INTERNAL_API_URL } from './constants'
 import { Product, Category, SiteSetting, BlogPost, ContactSubmission } from '../types'
 
 const getApiUrl = () => {
   return typeof window === 'undefined' ? INTERNAL_API_URL : API_URL
+}
+
+type BlogListResponse = BlogPost[] | { results?: BlogPost[]; count?: number }
+
+function normalizeBlogPosts(data: BlogListResponse | null | undefined): BlogPost[] {
+  if (Array.isArray(data)) {
+    return data
+  }
+
+  if (data && typeof data === 'object' && Array.isArray(data.results)) {
+    return data.results
+  }
+
+  return []
 }
 
 async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -28,6 +42,13 @@ async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T
     ...options,
     headers,
   })
+
+  if (response.status === 401 && !path.includes('/auth/token/')) {
+    if (typeof window !== 'undefined') {
+      document.cookie = 'admin_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;'
+      window.location.href = '/admin/login'
+    }
+  }
 
   if (!response.ok) {
     const errorText = await response.text()
@@ -83,16 +104,38 @@ export const api = {
 
   // Blog
   async getBlogPosts(): Promise<BlogPost[]> {
-    return apiRequest<BlogPost[]>('/blog/')
+    const data = await apiRequest<BlogListResponse>(API_ENDPOINTS.blog.posts)
+    return normalizeBlogPosts(data)
   },
 
   async getBlogPost(slug: string): Promise<BlogPost> {
-    return apiRequest<BlogPost>(`/blog/${slug}/`)
+    return apiRequest<BlogPost>(API_ENDPOINTS.blog.detail(slug))
+  },
+
+  async createBlogPost(post: Partial<BlogPost>): Promise<BlogPost> {
+    return apiRequest<BlogPost>(API_ENDPOINTS.blog.posts, {
+      method: 'POST',
+      body: JSON.stringify(post),
+    })
+  },
+
+  async updateBlogPost(slug: string, post: Partial<BlogPost>): Promise<BlogPost> {
+    return apiRequest<BlogPost>(API_ENDPOINTS.blog.detail(slug), {
+      method: 'PUT',
+      body: JSON.stringify(post),
+    })
   },
 
   // Contacts
   async submitContact(data: ContactSubmission): Promise<ContactSubmission> {
     return apiRequest<ContactSubmission>('/contacts/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
+
+  async submitQuoteRequest(data: Record<string, unknown>): Promise<void> {
+    return apiRequest<void>(API_ENDPOINTS.leads.quoteRequests, {
       method: 'POST',
       body: JSON.stringify(data),
     })
@@ -104,6 +147,10 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ username, password }),
     })
+  },
+
+  async getDashboardMetrics<T>(): Promise<T> {
+    return apiRequest<T>(API_ENDPOINTS.analytics.dashboardMetrics)
   },
 
   async saveProduct(product: Partial<Product>, isEdit: boolean, slug?: string): Promise<Product> {
@@ -122,9 +169,39 @@ export const api = {
   },
 
   async generateAIProduct(productName: string, category: string): Promise<any> {
-    return apiRequest<any>('/ai/generate-product/', {
+    return apiRequest<any>(API_ENDPOINTS.ai.generateProduct, {
       method: 'POST',
       body: JSON.stringify({ product_name: productName, category }),
     })
+  },
+
+  async generateAIProductFromForm(formData: FormData): Promise<any> {
+    return apiRequest<any>(API_ENDPOINTS.ai.generateProduct, {
+      method: 'POST',
+      body: formData,
+    })
+  },
+
+  async generateAIBlog(topic: string, keywords: string): Promise<any> {
+    return apiRequest<any>(API_ENDPOINTS.ai.generateBlog, {
+      method: 'POST',
+      body: JSON.stringify({ topic, keywords }),
+    })
+  },
+
+  async getSEOAudit<T>(): Promise<T> {
+    return apiRequest<T>('/seo/audit/')
+  },
+
+  async toggleSavedProduct(productSlug: string): Promise<any> {
+    return apiRequest<any>('/products/saved/toggle/', {
+      method: 'POST',
+      body: JSON.stringify({ product_slug: productSlug }),
+    })
+  },
+
+  async getSavedProducts(): Promise<any> {
+    return apiRequest<any>('/products/saved/')
   }
 }
+

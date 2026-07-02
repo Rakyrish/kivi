@@ -4,8 +4,8 @@ from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .models import Category, Product, SiteSetting
-from .serializers import CategorySerializer, ProductSerializer, SiteSettingSerializer
+from .models import Category, Product, SiteSetting, SavedProduct
+from .serializers import CategorySerializer, ProductSerializer, SiteSettingSerializer, SavedProductSerializer
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -143,3 +143,60 @@ class SiteSettingView(APIView):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class SavedProductViewSet(viewsets.ModelViewSet):
+    serializer_class = SavedProductSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return SavedProduct.objects.filter(user=self.request.user)
+
+    def create(self, request, *args, **kwargs):
+        # Allow passing 'product_slug' in request body
+        product_slug = request.data.get('product_slug')
+        if product_slug:
+            try:
+                product = Product.objects.get(slug=product_slug)
+                request.data['product'] = product.id
+            except Product.DoesNotExist:
+                return Response({'error': 'Product not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Check if already saved
+        product_id = request.data.get('product')
+        if product_id:
+            exists = SavedProduct.objects.filter(user=request.user, product_id=product_id).first()
+            if exists:
+                serializer = self.get_serializer(exists)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        return super().create(request, *args, **kwargs)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    @action(detail=False, methods=['post'], url_path='toggle')
+    def toggle(self, request):
+        product_slug = request.data.get('product_slug')
+        product_id = request.data.get('product')
+        
+        if not product_slug and not product_id:
+            return Response({'error': 'product or product_slug is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            if product_slug:
+                product = Product.objects.get(slug=product_slug)
+            else:
+                product = Product.objects.get(id=product_id)
+        except Product.DoesNotExist:
+            return Response({'error': 'Product not found'}, status=status.HTTP_404_NOT_FOUND)
+            
+        saved_item = SavedProduct.objects.filter(user=request.user, product=product).first()
+        if saved_item:
+            saved_item.delete()
+            return Response({'saved': False, 'message': 'Product removed from saved list'}, status=status.HTTP_200_OK)
+        else:
+            saved_item = SavedProduct.objects.create(user=request.user, product=product)
+            serializer = self.get_serializer(saved_item)
+            return Response({'saved': True, 'data': serializer.data, 'message': 'Product saved successfully'}, status=status.HTTP_201_CREATED)
+

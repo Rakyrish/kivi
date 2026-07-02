@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Category, Product, SiteSetting
+from .models import Category, Product, SiteSetting, SavedProduct
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -23,3 +23,13 @@ class SiteSettingSerializer(serializers.ModelSerializer):
     class Meta:
         model = SiteSetting
         fields = '__all__'
+
+
+class SavedProductSerializer(serializers.ModelSerializer):
+    product_details = ProductSerializer(source='product', read_only=True)
+
+    class Meta:
+        model = SavedProduct
+        fields = ['id', 'product', 'product_details', 'created_at']
+        read_only_fields = ['id', 'created_at']
+

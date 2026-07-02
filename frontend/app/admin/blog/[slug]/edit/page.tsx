@@ -1,19 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import { Save, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
-
-function getCookie(name: string): string {
-  if (typeof document === 'undefined') return ''
-  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`))
-  return match ? decodeURIComponent(match[1]) : ''
-}
+import { api } from '@/lib/api'
 
 export default function EditBlogPostPage() {
   const params = useParams()
   const slug = params?.slug as string
-  const router = useRouter()
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -35,12 +29,7 @@ export default function EditBlogPostPage() {
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/blog/${slug}/`,
-          { headers: { Authorization: `Token ${getCookie('admin_token')}` } }
-        )
-        if (!res.ok) throw new Error('Failed to load post')
-        const data = await res.json()
+        const data = await api.getBlogPost(slug)
         setForm({
           title: data.title || '',
           slug: data.slug || '',
@@ -76,18 +65,7 @@ export default function EditBlogPostPage() {
     setSuccessMsg('')
 
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/blog/${slug}/`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Token ${getCookie('admin_token')}`,
-          },
-          body: JSON.stringify(form),
-        }
-      )
-      if (!res.ok) throw new Error(await res.text())
+      await api.updateBlogPost(slug, form)
       setSuccessMsg('Post updated successfully!')
     } catch (err: any) {
       setErrorMsg(err.message || 'Failed to update post.')

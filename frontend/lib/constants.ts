@@ -26,3 +26,39 @@ export const SITE = {
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
 export const INTERNAL_API_URL = process.env.INTERNAL_API_URL || API_URL
+
+export const ROUTES = {
+  home: '/',
+  products: '/products',
+  blog: '/blog',
+  about: '/about',
+  contact: '/contact',
+  admin: {
+    dashboard: '/admin',
+    login: '/admin/login',
+    products: '/admin/products',
+    productNew: '/admin/products/new',
+    productEdit: (slug: string) => `/admin/products/${slug}/edit`,
+    blog: '/admin/blog',
+    blogNew: '/admin/blog/new',
+    blogEdit: (slug: string) => `/admin/blog/${slug}/edit`,
+    django: '/django-admin/',
+  },
+} as const
+
+export const API_ENDPOINTS = {
+  blog: {
+    posts: '/blog/',
+    detail: (slug: string) => `/blog/${slug}/`,
+  },
+  ai: {
+    generateBlog: '/ai/generate-blog/',
+    generateProduct: '/ai/generate-product/',
+  },
+  leads: {
+    quoteRequests: '/leads/quote-requests/',
+  },
+  analytics: {
+    dashboardMetrics: '/analytics/dashboard-metrics/',
+  },
+} as const

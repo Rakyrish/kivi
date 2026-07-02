@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Sparkles, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
+import { Sparkles, Loader2, CheckCircle, AlertCircle, Upload, Link2 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { Category } from '@/types'
 
@@ -13,21 +13,23 @@ interface AIGeneratePanelProps {
 export default function AIGeneratePanel({ categories, onGenerate }: AIGeneratePanelProps) {
   const [productName, setProductName] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('')
+  const [imageUrl, setImageUrl] = useState('')
+  const [imageFile, setImageFile] = useState<File | null>(null)
   const [status, setStatus] = useState<'idle' | 'generating' | 'done' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState('')
 
   const handleGenerate = async () => {
-    if (!productName) {
-      setErrorMsg('Product name is required.')
-      setStatus('error')
-      return
-    }
-
     setStatus('generating')
     setErrorMsg('')
 
     try {
-      const data = await api.generateAIProduct(productName, selectedCategory)
+      const formData = new FormData()
+      if (productName) formData.append('product_name', productName)
+      if (selectedCategory) formData.append('category', selectedCategory)
+      if (imageUrl) formData.append('image_url', imageUrl)
+      if (imageFile) formData.append('image', imageFile)
+
+      const data = await api.generateAIProductFromForm(formData)
       onGenerate(data)
       setStatus('done')
     } catch (err: any) {
@@ -37,40 +39,42 @@ export default function AIGeneratePanel({ categories, onGenerate }: AIGeneratePa
   }
 
   return (
-    <div className="bg-[#081525] border border-[#00A0C0]/20 p-6 rounded-[4px] shadow-lg space-y-4">
-      <div className="flex items-center gap-2 border-b border-[#00A0C0]/10 pb-3">
-        <Sparkles size={18} className="text-[#00A0C0]" />
-        <h3 className="font-display font-extrabold text-sm uppercase tracking-wider text-[#F4F7FA]">
-          AI Product Generator Workspace
+    <div className="bg-kivi-surface border border-kivi-cyan/20 p-6 rounded-kivi shadow-glow-cyan space-y-4 text-kivi-white">
+      <div className="flex items-center gap-2 border-b border-kivi-cyan/10 pb-3">
+        <Sparkles size={18} className="text-kivi-cyan" />
+        <h3 className="font-display font-extrabold text-sm uppercase tracking-wider text-kivi-white">
+          AI Vision Product Ingestion
         </h3>
       </div>
 
-      <p className="text-[11px] text-[#94A3B8] leading-relaxed">
-        Input the chemical name and category. The AI will generate technical specs, CAS numbers, formulas, and SEO metadata.
+      <p className="text-[11px] text-kivi-mid leading-relaxed">
+        Let AI infer chemical specs. Upload an image of a chemical drum, sack label, or spec-sheet, or specify the name & category directly.
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Name */}
         <div className="space-y-1">
-          <label className="text-[9px] uppercase font-bold tracking-wider text-[#606060] block">
-            Product Name
+          <label className="text-[9px] uppercase font-bold tracking-wider text-kivi-mid block">
+            Product Name (Optional if uploading image)
           </label>
           <input
             type="text"
             placeholder="e.g. Sodium Hydroxide"
             value={productName}
             onChange={(e) => setProductName(e.target.value)}
-            className="w-full bg-[#002040]/30 border border-[#00A0C0]/15 focus:border-[#00A0C0] text-[#F4F7FA] px-3 py-2 text-xs focus:outline-none transition-colors rounded-[2px]"
+            className="w-full bg-kivi-navy/30 border border-kivi-cyan/15 focus:border-kivi-cyan text-kivi-white px-3 py-2 text-xs focus:outline-none transition-colors rounded-kivi-sm"
           />
         </div>
 
+        {/* Category */}
         <div className="space-y-1">
-          <label className="text-[9px] uppercase font-bold tracking-wider text-[#606060] block">
+          <label className="text-[9px] uppercase font-bold tracking-wider text-kivi-mid block">
             Category Context
           </label>
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="w-full bg-[#081525] border border-[#00A0C0]/15 focus:border-[#00A0C0] text-[#F4F7FA] px-3 py-2 text-xs focus:outline-none transition-colors rounded-[2px]"
+            className="w-full bg-kivi-surface border border-kivi-cyan/15 focus:border-kivi-cyan text-kivi-white px-3 py-2 text-xs focus:outline-none transition-colors rounded-kivi-sm"
           >
             <option value="">Select Category...</option>
             {categories.map((cat) => (
@@ -82,35 +86,65 @@ export default function AIGeneratePanel({ categories, onGenerate }: AIGeneratePa
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-4 pt-2">
+      {/* Image Upload/URL Tab Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-kivi-cyan/5">
+        {/* File Upload */}
+        <div className="space-y-1">
+          <label className="text-[9px] uppercase font-bold tracking-wider text-kivi-mid flex items-center gap-1.5 mb-1">
+            <Upload size={12} className="text-kivi-cyan" /> Upload Sack/Label Photo
+          </label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+            className="w-full bg-kivi-navy/30 border border-kivi-cyan/15 text-kivi-white px-3 py-1.5 text-xs focus:outline-none focus:border-kivi-cyan rounded-kivi-sm file:mr-4 file:py-1 file:px-2.5 file:rounded-kivi-sm file:border-0 file:text-[10px] file:font-semibold file:bg-kivi-cyan file:text-kivi-navy file:cursor-pointer"
+          />
+        </div>
+
+        {/* URL Input */}
+        <div className="space-y-1">
+          <label className="text-[9px] uppercase font-bold tracking-wider text-kivi-mid flex items-center gap-1.5">
+            <Link2 size={12} className="text-kivi-cyan" /> Image Source URL
+          </label>
+          <input
+            type="url"
+            placeholder="https://example.com/chemical-label.jpg"
+            value={imageUrl}
+            onChange={(e) => setImageUrl(e.target.value)}
+            className="w-full bg-kivi-navy/30 border border-kivi-cyan/15 focus:border-kivi-cyan text-kivi-white px-3 py-2 text-xs focus:outline-none transition-colors rounded-kivi-sm"
+          />
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between gap-4 pt-2 border-t border-kivi-cyan/10">
         {status === 'generating' && (
-          <div className="flex items-center gap-2 text-xs text-[#00A0C0]">
+          <div className="flex items-center gap-2 text-xs text-kivi-cyan">
             <Loader2 size={16} className="animate-spin" />
-            <span>Generating high-purity product profile...</span>
+            <span>Analyzing image & generating compound specifications...</span>
           </div>
         )}
 
         {status === 'done' && (
-          <div className="flex items-center gap-2 text-xs text-emerald-400">
+          <div className="flex items-center gap-2 text-xs text-kivi-success">
             <CheckCircle size={16} />
-            <span>Form populated successfully! Review specs below.</span>
+            <span>Specifications inferred! Verify & save.</span>
           </div>
         )}
 
         {status === 'error' && (
-          <div className="flex items-center gap-2 text-xs text-red-400">
+          <div className="flex items-center gap-2 text-xs text-kivi-error">
             <AlertCircle size={16} />
-            <span>{errorMsg}</span>
+            <span className="truncate max-w-[250px]">{errorMsg}</span>
           </div>
         )}
 
         {status !== 'generating' && (
           <button
             onClick={handleGenerate}
-            className="ml-auto inline-flex items-center gap-2 px-5 py-2.5 bg-[#00A0C0] text-[#002040] hover:bg-[#00A0E0] transition-colors text-xs font-bold uppercase tracking-wider rounded-[2px]"
+            className="ml-auto inline-flex items-center gap-2 px-5 py-2.5 bg-kivi-cyan hover:bg-kivi-cyan-hover text-kivi-navy transition-colors text-xs font-bold uppercase tracking-wider rounded-kivi-sm shadow-glow-cyan"
           >
             <Sparkles size={14} />
-            Generate with AI
+            Run AI Inference
           </button>
         )}
       </div>

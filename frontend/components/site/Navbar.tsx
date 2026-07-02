@@ -1,23 +1,92 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { Menu, X, ArrowRight } from 'lucide-react'
-import { SITE } from '@/lib/constants'
+import {
+  Menu, X, ArrowRight, ChevronDown, FlaskConical, Droplets, Zap,
+  Leaf, Building2, TestTubes, Package, Waves
+} from 'lucide-react'
+import { ROUTES, SITE } from '@/lib/constants'
+import { api } from '@/lib/api'
+import GlobalSearch from './GlobalSearch'
+import ThemeToggle from './ThemeToggle'
+import type { Category, Product } from '@/types'
+
+const CATEGORY_ICONS: Record<string, React.ElementType> = {
+  default: FlaskConical,
+  solvent: Droplets,
+  acid: Zap,
+  agriculture: Leaf,
+  industrial: Building2,
+  lab: TestTubes,
+  packaging: Package,
+  water: Waves,
+}
+
+function getCategoryIcon(name: string): React.ElementType {
+  const lower = name.toLowerCase()
+  if (lower.includes('solvent')) return Droplets
+  if (lower.includes('acid')) return Zap
+  if (lower.includes('agri') || lower.includes('fertiliz')) return Leaf
+  if (lower.includes('water') || lower.includes('treatment')) return Waves
+  if (lower.includes('lab')) return TestTubes
+  return FlaskConical
+}
+
+const NAV_LINKS = [
+  { name: 'Home', href: '/' },
+  { name: 'Products', href: ROUTES.products, hasMega: true },
+  { name: 'Blog', href: ROUTES.blog },
+  { name: 'About', href: ROUTES.about },
+  { name: 'Contact', href: ROUTES.contact },
+]
+
+const INDUSTRIES = [
+  'Water Treatment', 'Manufacturing', 'Food Processing',
+  'Agriculture', 'Mining', 'Construction', 'Hospitality', 'Laboratories',
+]
 
 export default function Navbar() {
-  const [isOpen, setIsOpen] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [mobileProductsOpen, setMobileProductsOpen] = useState(false)
+  const [megaOpen, setMegaOpen] = useState(false)
+  const [categories, setCategories] = useState<Category[]>([])
+  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([])
+  const [scrolled, setScrolled] = useState(false)
   const pathname = usePathname()
+  const megaRef = useRef<HTMLDivElement>(null)
+  const megaTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const links = [
-    { name: 'Home', href: '/' },
-    { name: 'Products', href: '/products' },
-    { name: 'Blog', href: '/blog' },
-    { name: 'About Us', href: '/about' },
-    { name: 'Contact', href: '/contact' },
-  ]
+  useEffect(() => {
+    Promise.allSettled([
+      api.getCategories(),
+      api.getFeaturedProducts(),
+    ]).then(([catResult, prodResult]) => {
+      if (catResult.status === 'fulfilled') setCategories(catResult.value || [])
+      if (prodResult.status === 'fulfilled') setFeaturedProducts((prodResult.value || []).slice(0, 4))
+    })
+  }, [])
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  useEffect(() => {
+    setMobileOpen(false)
+    setMegaOpen(false)
+  }, [pathname])
+
+  const openMega = () => {
+    if (megaTimerRef.current) clearTimeout(megaTimerRef.current)
+    setMegaOpen(true)
+  }
+  const closeMega = () => {
+    megaTimerRef.current = setTimeout(() => setMegaOpen(false), 120)
+  }
 
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/'
@@ -25,99 +94,273 @@ export default function Navbar() {
   }
 
   return (
-    <nav className="sticky top-0 z-50 bg-[#002040] border-b border-[#00A0C0]/20 text-[#F4F7FA]">
+    <nav
+      className={`site-header sticky top-0 z-50 backdrop-blur-md transition-all duration-300 ${
+        scrolled ? 'shadow-lg' : ''
+      }`}
+      style={{ borderBottom: '1px solid var(--border-nav)', background: 'var(--bg-nav)' }}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20">
-          {/* Logo / Brand */}
-          <div className="flex-shrink-0 flex items-center gap-2">
-            <Link href="/" className="flex items-center gap-3 group">
-              <div className="relative w-10 h-10 rounded-full overflow-hidden ring-2 ring-[#00A0C0]/40 group-hover:ring-[#00A0C0] transition-all duration-300 flex-shrink-0">
+        <div className="flex items-center justify-between gap-4 h-[72px]">
+
+          {/* ── Logo ── */}
+          <div className="flex-shrink-0">
+            <Link href={ROUTES.home} className="flex items-center gap-3 group" aria-label={`${SITE.shortName} home`}>
+              <div className="relative h-11 w-11 overflow-visible rounded-[3px] border border-[var(--border-input)] bg-white flex items-center justify-center shadow-sm transition-all duration-300 group-hover:border-[var(--kivi-cyan)]">
                 <Image
                   src="/kivi.jpeg"
                   alt="Kivi Chemicals Logo"
                   fill
-                  sizes="40px"
-                  className="object-cover"
+                  sizes="44px"
+                  className="object-contain p-1"
                   priority
                 />
               </div>
-              <div className="flex flex-col">
-                <span className="font-display font-extrabold text-xl tracking-tight leading-none text-[#F4F7FA]">
+              <div className="hidden sm:flex flex-col">
+                <span className="font-display text-base tracking-tight leading-none" style={{ color: 'var(--text-primary)' }}>
                   {SITE.shortName.toUpperCase()}
                 </span>
-                <span className="text-[10px] text-[#00A0C0] uppercase tracking-wider font-bold">
-                  Chemicals &amp; Solvents
+                <span className="text-[10px] uppercase tracking-widest font-bold" style={{ color: 'var(--kivi-cyan)' }}>
+                  Chemicals & Solvents
                 </span>
               </div>
             </Link>
           </div>
 
-          {/* Desktop Nav */}
-          <div className="hidden md:flex items-center space-x-8">
-            {links.map((link) => (
-              <Link
-                key={link.name}
-                href={link.href}
-                className={`text-sm font-medium tracking-wide transition-colors hover:text-[#00A0C0] ${
-                  isActive(link.href) ? 'text-[#00A0C0] font-semibold border-b-2 border-[#00A0C0] pb-1' : 'text-[#94A3B8]'
-                }`}
-              >
-                {link.name}
-              </Link>
-            ))}
+          {/* ── Global Search ── */}
+          <GlobalSearch />
+
+          {/* ── Desktop Navigation ── */}
+          <div className="hidden lg:flex items-center gap-1">
+            {NAV_LINKS.map((link) => {
+              if (link.hasMega) {
+                return (
+                  <div
+                    key={link.name}
+                    ref={megaRef}
+                    className="relative"
+                    onMouseEnter={openMega}
+                    onMouseLeave={closeMega}
+                  >
+                    <button
+                      className={`flex items-center gap-1 px-3 py-2 text-sm rounded-[2px] transition-colors ${
+                        isActive(link.href) ? 'font-bold' : ''
+                      }`}
+                      style={{ color: isActive(link.href) ? 'var(--text-nav-active)' : 'var(--text-nav)' }}
+                      aria-haspopup="true"
+                      aria-expanded={megaOpen}
+                    >
+                      {link.name}
+                      <ChevronDown size={14} className={`transition-transform ${megaOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {/* Mega Menu Panel */}
+                    {megaOpen && (
+                      <div
+                        className="mega-menu-panel absolute top-full left-1/2 -translate-x-1/2 mt-1 w-[780px] max-w-[calc(100vw-2rem)] rounded-[4px] p-0 overflow-hidden animate-fade-in z-50"
+                        onMouseEnter={openMega}
+                        onMouseLeave={closeMega}
+                      >
+                        <div className="grid grid-cols-5">
+                          {/* Left: Categories */}
+                          <div className="col-span-2 p-5 border-r" style={{ borderColor: 'var(--border-divider)' }}>
+                            <div className="overline mb-3">Chemical Categories</div>
+                            <div className="space-y-1">
+                              {categories.slice(0, 8).map((cat) => {
+                                const Icon = getCategoryIcon(cat.name)
+                                return (
+                                  <Link
+                                    key={cat.id}
+                                    href={`${ROUTES.products}?category=${cat.slug}`}
+                                    className="flex items-center gap-2.5 px-3 py-2 rounded-[2px] text-sm transition-colors group/cat"
+                                    style={{ color: 'var(--text-secondary)' }}
+                                  >
+                                    <Icon size={14} className="flex-shrink-0 transition-colors" style={{ color: 'var(--kivi-cyan)' }} />
+                                    <span className="truncate group-hover/cat:text-[var(--kivi-cyan)] transition-colors">{cat.name}</span>
+                                    <span className="ml-auto text-[10px] font-mono font-bold flex-shrink-0" style={{ color: 'var(--text-muted)' }}>
+                                      {cat.product_count || 0}
+                                    </span>
+                                  </Link>
+                                )
+                              })}
+                              <Link
+                                href={ROUTES.products}
+                                className="flex items-center gap-2 px-3 py-2 text-xs font-bold uppercase tracking-wider transition-colors mt-2 pt-2"
+                                style={{ color: 'var(--kivi-cyan)', borderTop: '1px solid var(--border-divider)' }}
+                              >
+                                View All Products <ArrowRight size={12} />
+                              </Link>
+                            </div>
+                          </div>
+
+                          {/* Right: Featured Products */}
+                          <div className="col-span-3 p-5">
+                            <div className="overline mb-3">Featured Chemicals</div>
+                            <div className="grid grid-cols-2 gap-3">
+                              {featuredProducts.map((product) => (
+                                <Link
+                                  key={product.id}
+                                  href={`${ROUTES.products}/${product.slug}`}
+                                  className="flex items-start gap-3 p-3 rounded-[3px] border transition-all group/prod"
+                                  style={{ background: 'var(--bg-page)', borderColor: 'var(--border-card)' }}
+                                >
+                                  <div className="flex-shrink-0 w-9 h-9 rounded-[2px] flex items-center justify-center" style={{ background: 'var(--kivi-cyan-muted)' }}>
+                                    <FlaskConical size={16} style={{ color: 'var(--kivi-cyan)' }} />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <div className="text-xs font-bold truncate group-hover/prod:text-[var(--kivi-cyan)] transition-colors" style={{ color: 'var(--text-primary)' }}>
+                                      {product.name}
+                                    </div>
+                                    <div className="font-mono text-[10px] mt-0.5" style={{ color: 'var(--kivi-cyan)' }}>
+                                      {product.chemical_formula || product.category_name || '—'}
+                                    </div>
+                                  </div>
+                                </Link>
+                              ))}
+                            </div>
+
+                            {/* Industries strip */}
+                            <div className="mt-4 pt-3" style={{ borderTop: '1px solid var(--border-divider)' }}>
+                              <div className="overline mb-2">Industries Served</div>
+                              <div className="flex flex-wrap gap-1.5">
+                                {INDUSTRIES.slice(0, 5).map((ind) => (
+                                  <Link
+                                    key={ind}
+                                    href={`${ROUTES.products}?industry=${encodeURIComponent(ind)}`}
+                                    className="text-[10px] px-2 py-1 rounded-[2px] border transition-colors"
+                                    style={{ color: 'var(--text-secondary)', borderColor: 'var(--border-default)', background: 'var(--bg-page)' }}
+                                  >
+                                    {ind}
+                                  </Link>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              }
+
+              return (
+                <Link
+                  key={link.name}
+                  href={link.href}
+                  className={`px-3 py-2 text-sm rounded-[2px] transition-colors ${isActive(link.href) ? 'font-bold' : ''}`}
+                  style={{ color: isActive(link.href) ? 'var(--text-nav-active)' : 'var(--text-nav)' }}
+                >
+                  {link.name}
+                </Link>
+              )
+            })}
           </div>
 
-          {/* Desktop CTA */}
-          <div className="hidden md:block">
+          {/* ── Desktop CTA ── */}
+          <div className="hidden lg:flex items-center gap-3 flex-shrink-0">
+            <ThemeToggle />
             <Link
-              href="/contact"
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-xs uppercase tracking-wider font-bold bg-[#00A0C0] text-[#002040] hover:bg-[#00A0E0] transition-all duration-300 rounded-[2px]"
+              href={ROUTES.contact}
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-xs uppercase tracking-wider font-bold rounded-[2px] transition-all duration-300"
+              style={{ background: 'var(--kivi-cyan)', color: '#002040' }}
             >
               Request Quote
               <ArrowRight size={14} />
             </Link>
           </div>
 
-          {/* Mobile menu button */}
-          <div className="md:hidden">
+          {/* ── Mobile Toolbar ── */}
+          <div className="lg:hidden flex items-center gap-2">
+            <ThemeToggle />
             <button
-              onClick={() => setIsOpen(!isOpen)}
-              className="inline-flex items-center justify-center p-2 rounded-sm text-[#94A3B8] hover:text-[#F4F7FA] hover:bg-[#081525] focus:outline-none"
-              aria-expanded="false"
+              id="mobile-menu-toggle"
+              onClick={() => setMobileOpen(!mobileOpen)}
+              className="inline-flex items-center justify-center p-2 rounded-[2px] focus:outline-none transition-colors"
+              style={{ color: 'var(--text-secondary)' }}
+              aria-label="Toggle menu"
+              aria-expanded={mobileOpen}
             >
-              <span className="sr-only">Open main menu</span>
-              {isOpen ? <X size={24} /> : <Menu size={24} />}
+              {mobileOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Mobile Menu */}
-      {isOpen && (
-        <div className="md:hidden bg-[#081525] border-b border-[#00A0C0]/20 px-4 pt-2 pb-6 space-y-4">
-          {links.map((link) => (
-            <Link
-              key={link.name}
-              href={link.href}
-              onClick={() => setIsOpen(false)}
-              className={`block px-3 py-2 rounded-sm text-base font-medium transition-colors ${
-                isActive(link.href)
-                  ? 'text-[#00A0C0] bg-[#002040]'
-                  : 'text-[#94A3B8] hover:text-[#F4F7FA] hover:bg-[#002040]/50'
-              }`}
-            >
-              {link.name}
-            </Link>
-          ))}
-          <div className="pt-4 border-t border-[#00A0C0]/10 px-3">
-            <Link
-              href="/contact"
-              onClick={() => setIsOpen(false)}
-              className="flex items-center justify-center gap-2 w-full py-3 text-sm uppercase tracking-wider font-bold bg-[#00A0C0] text-[#002040] hover:bg-[#00A0E0] transition-all rounded-[2px]"
-            >
-              Request Quote
-              <ArrowRight size={14} />
-            </Link>
+      {/* ── Mobile Menu ── */}
+      {mobileOpen && (
+        <div className="lg:hidden border-t" style={{ background: 'var(--bg-dropdown)', borderColor: 'var(--border-nav)' }}>
+          <div className="px-4 py-4 space-y-1">
+            {NAV_LINKS.map((link) => {
+              if (link.hasMega) {
+                return (
+                  <div key={link.name}>
+                    <button
+                      onClick={() => setMobileProductsOpen(!mobileProductsOpen)}
+                      className="w-full flex items-center justify-between px-3 py-3 rounded-[2px] text-sm font-medium transition-colors"
+                      style={{ color: 'var(--text-primary)', background: isActive(link.href) ? 'var(--kivi-cyan-muted)' : 'transparent' }}
+                    >
+                      {link.name}
+                      <ChevronDown size={16} className={`transition-transform ${mobileProductsOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {mobileProductsOpen && (
+                      <div className="ml-3 mt-1 space-y-1 border-l pl-3" style={{ borderColor: 'var(--border-divider)' }}>
+                        <div className="overline pt-1 pb-2">Categories</div>
+                        {categories.slice(0, 8).map((cat) => {
+                          const Icon = getCategoryIcon(cat.name)
+                          return (
+                            <Link
+                              key={cat.id}
+                              href={`${ROUTES.products}?category=${cat.slug}`}
+                              onClick={() => setMobileOpen(false)}
+                              className="flex items-center gap-2 px-2 py-2 text-sm rounded-[2px] transition-colors"
+                              style={{ color: 'var(--text-secondary)' }}
+                            >
+                              <Icon size={13} style={{ color: 'var(--kivi-cyan)' }} />
+                              {cat.name}
+                            </Link>
+                          )
+                        })}
+                        <Link
+                          href={ROUTES.products}
+                          onClick={() => setMobileOpen(false)}
+                          className="flex items-center gap-2 px-2 py-2 text-xs font-bold uppercase tracking-wider"
+                          style={{ color: 'var(--kivi-cyan)' }}
+                        >
+                          All Products <ArrowRight size={12} />
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                )
+              }
+
+              return (
+                <Link
+                  key={link.name}
+                  href={link.href}
+                  onClick={() => setMobileOpen(false)}
+                  className="block px-3 py-3 rounded-[2px] text-sm font-medium transition-colors"
+                  style={{
+                    color: isActive(link.href) ? 'var(--text-nav-active)' : 'var(--text-primary)',
+                    background: isActive(link.href) ? 'var(--kivi-cyan-muted)' : 'transparent',
+                  }}
+                >
+                  {link.name}
+                </Link>
+              )
+            })}
+
+            <div className="pt-3 mt-3" style={{ borderTop: '1px solid var(--border-divider)' }}>
+              <Link
+                href={ROUTES.contact}
+                onClick={() => setMobileOpen(false)}
+                className="flex items-center justify-center gap-2 w-full py-3 text-sm font-bold uppercase tracking-wider rounded-[2px] transition-all"
+                style={{ background: 'var(--kivi-cyan)', color: '#002040' }}
+              >
+                Request Quote <ArrowRight size={14} />
+              </Link>
+            </div>
           </div>
         </div>
       )}

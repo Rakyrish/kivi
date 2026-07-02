@@ -24,6 +24,9 @@ INSTALLED_APPS = [
     'apps.seo',
     'apps.contacts',
     'apps.ai_generator',
+    'apps.leads',
+    'apps.analytics',
+    'django_celery_beat',
 ]
 
 MIDDLEWARE = [
@@ -164,3 +167,15 @@ OPENAI_MODEL = os.environ.get('OPENAI_MODEL', 'gpt-4o-mini')
 EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
 RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
 FROM_EMAIL = os.environ.get('FROM_EMAIL', 'info@kivichemicals.com')
+
+# Celery configurations
+CELERY_BROKER_URL = os.environ.get('REDIS_URL', 'redis://redis:6379/1')
+CELERY_RESULT_BACKEND = os.environ.get('REDIS_URL', 'redis://redis:6379/1')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+
+# Configure Celery Beat Scheduler
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+

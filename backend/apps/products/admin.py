@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Category, Product, SiteSetting
+from .models import Category, Product, SiteSetting, SavedProduct
 
 
 @admin.register(Category)
@@ -29,3 +29,11 @@ class SiteSettingAdmin(admin.ModelAdmin):
     def has_add_permission(self, request):
         # Limit to single instance
         return not SiteSetting.objects.exists()
+
+
+@admin.register(SavedProduct)
+class SavedProductAdmin(admin.ModelAdmin):
+    list_display = ('user', 'product', 'created_at')
+    list_filter = ('user', 'created_at')
+    search_fields = ('user__username', 'product__name')
+
