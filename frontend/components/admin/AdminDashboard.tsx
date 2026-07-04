@@ -1,25 +1,27 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import {
   Beaker, FileText, MessageSquare, ArrowUpRight, Shield, Activity,
   BarChart2, Cpu, CheckCircle, AlertTriangle, Eye, ShieldAlert,
-  Search, RefreshCw, Key, Info, Package, AlertCircle, Sparkles
+  Search, RefreshCw, Key, Info, Package, AlertCircle, Sparkles,
+  Bug, Bot, Send, TrendingUp, Warehouse, XCircle, Zap
 } from 'lucide-react'
 import Link from 'next/link'
 import { api } from '@/lib/api'
 import { ROUTES } from '@/lib/constants'
 
-type TabType = 'overview' | 'seo' | 'inventory' | 'security'
+type TabType = 'overview' | 'seo' | 'inventory' | 'errors' | 'assistant' | 'security'
 
 interface MetricsData {
   counts: {
     products: number
-    categories: number
+    categories: numberhttps://finstarindustrialchemicals.com/_next/image?url=https%3A%2F%2Fres.cloudinary.com%2Fdboska3dn%2Fimage%2Fupload%2Fv1783066647%2Fproducts%2Frftqprlghc2meyu5xpdt.jpg&w=640&q=75
     blog_posts: number
     leads: number
     quote_requests: number
     contacts: number
+    unresolved_errors?: number
   }
   trends: {
     pageviews_30d: number
@@ -46,19 +48,30 @@ interface MetricsData {
     cloudinary: string
   }
   google_search_console: {
-    status: string
     clicks: number
     impressions: number
     average_position: number
     top_queries: Array<{ query: string; clicks: number; impressions: number }>
   }
+  lighthouse?: {
+    performance_score: number
+    seo_score: number
+    accessibility_score: number
+    best_practices_score: number
+    lcp: number
+    cls: number
+    fcp: number
+    ttfb: number
+  }
   inventory?: {
     total_active: number
     in_stock: number
+    low_stock: number
     out_of_stock: number
+    discontinued: number
     featured: number
-    high_demand: number
     stock_rate: number
+    total_valuation: number
   }
   security?: {
     active_admin_users: number
@@ -66,6 +79,22 @@ interface MetricsData {
     failed_login_note: string
     rate_limit_note: string
   }
+}
+
+interface SystemError {
+  id: number
+  error_type: string
+  status_code: number
+  path: string
+  source: string
+  message: string
+  status: string
+  created_at: string
+}
+
+interface ChatMessage {
+  role: 'user' | 'assistant'
+  content: string
 }
 
 interface SEOAuditData {
@@ -105,6 +134,17 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
+  // Error Center
+  const [sysErrors, setSysErrors] = useState<SystemError[]>([])
+  const [errorsLoading, setErrorsLoading] = useState(false)
+  const [resolvingAll, setResolvingAll] = useState(false)
+  // AI Assistant
+  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([
+    { role: 'assistant', content: 'Hello! I am your Kivi Chemicals AI Business Assistant. I have real-time access to inventory, errors, and analytics. How can I help you today?' }
+  ])
+  const [chatInput, setChatInput] = useState('')
+  const [chatLoading, setChatLoading] = useState(false)
+  const chatEndRef = useRef<HTMLDivElement>(null)
 
   const fetchData = async () => {
     try {
@@ -123,13 +163,51 @@ export default function AdminDashboardPage() {
     }
   }
 
-  useEffect(() => {
-    fetchData()
-  }, [])
+  useEffect(() => { fetchData() }, [])
 
-  const handleRefresh = () => {
-    setRefreshing(true)
-    fetchData()
+  useEffect(() => {
+    if (activeTab === 'errors' && sysErrors.length === 0) {
+      setErrorsLoading(true)
+      api.getSystemErrors().then((d: any) => {
+        setSysErrors(d.results || d)
+      }).catch(() => { }).finally(() => setErrorsLoading(false))
+    }
+  }, [activeTab])
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [chatHistory])
+
+  const handleRefresh = () => { setRefreshing(true); fetchData() }
+
+  const handleResolveError = async (id: number) => {
+    await api.resolveSystemError(id)
+    setSysErrors(prev => prev.map(e => e.id === id ? { ...e, status: 'resolved' } : e))
+  }
+
+  const handleResolveAll = async () => {
+    setResolvingAll(true)
+    await api.resolveAllSystemErrors()
+    setSysErrors(prev => prev.map(e => ({ ...e, status: 'resolved' })))
+    setResolvingAll(false)
+  }
+
+  const handleSendChat = async () => {
+    if (!chatInput.trim() || chatLoading) return
+    const userMsg: ChatMessage = { role: 'user', content: chatInput.trim() }
+    const newHistory = [...chatHistory, userMsg]
+    setChatHistory(newHistory)
+    setChatInput('')
+    setChatLoading(true)
+    try {
+      const apiHistory = newHistory.slice(1).map(m => ({ role: m.role, content: m.content }))
+      const res = await api.askAIAssistant(userMsg.content, apiHistory)
+      setChatHistory(prev => [...prev, { role: 'assistant', content: res.response }])
+    } catch {
+      setChatHistory(prev => [...prev, { role: 'assistant', content: 'Sorry, I encountered an error. Please try again.' }])
+    } finally {
+      setChatLoading(false)
+    }
   }
 
   if (loading) {
@@ -201,7 +279,9 @@ export default function AdminDashboardPage() {
         {[
           { id: 'overview', label: 'Overview', icon: Activity },
           { id: 'seo', label: 'SEO Audit', icon: Search },
-          { id: 'inventory', label: 'Inventory', icon: Package },
+          { id: 'inventory', label: 'Inventory', icon: Warehouse },
+          { id: 'errors', label: 'Error Center', icon: Bug, badge: metrics?.counts.unresolved_errors },
+          { id: 'assistant', label: 'AI Assistant', icon: Bot },
           { id: 'security', label: 'Security', icon: ShieldAlert },
         ].map((tab) => {
           const Icon = tab.icon
@@ -210,7 +290,7 @@ export default function AdminDashboardPage() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as TabType)}
-              className="flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 -mb-[1px] transition-all"
+              className="flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 -mb-[1px] transition-all relative"
               style={{
                 borderColor: active ? 'var(--kivi-cyan)' : 'transparent',
                 color: active ? 'var(--kivi-cyan)' : 'var(--text-secondary)',
@@ -218,6 +298,9 @@ export default function AdminDashboardPage() {
             >
               <Icon size={14} />
               {tab.label}
+              {tab.badge ? (
+                <span className="absolute -top-1 -right-1 text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center" style={{ background: 'var(--kivi-error)', color: '#fff' }}>{tab.badge}</span>
+              ) : null}
             </button>
           )
         })}
@@ -517,85 +600,210 @@ export default function AdminDashboardPage() {
         )}
 
         {/* ── 3. Inventory Tab ── */}
-        {activeTab === 'inventory' && metrics.inventory && (
+        {activeTab === 'inventory' && metrics?.inventory && (
           <div className="space-y-6 animate-fade-in">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="theme-card p-6 rounded-[4px] text-center">
-                <span className="text-[10px] uppercase font-bold tracking-widest block mb-2" style={{ color: 'var(--text-secondary)' }}>Stock Availability Rate</span>
-                <div className="text-3xl font-mono font-bold" style={{ color: 'var(--kivi-success)' }}>{metrics.inventory.stock_rate}%</div>
-              </div>
-              <div className="theme-card p-6 rounded-[4px] text-center">
-                <span className="text-[10px] uppercase font-bold tracking-widest block mb-2" style={{ color: 'var(--text-secondary)' }}>In-Stock Formulations</span>
-                <div className="text-3xl font-mono font-bold" style={{ color: 'var(--text-primary)' }}>{metrics.inventory.in_stock}</div>
-              </div>
-              <div className="theme-card p-6 rounded-[4px] text-center">
-                <span className="text-[10px] uppercase font-bold tracking-widest block mb-2" style={{ color: 'var(--text-secondary)' }}>Confirm Supply Required</span>
-                <div className="text-3xl font-mono font-bold" style={{ color: 'var(--kivi-hazard)' }}>{metrics.inventory.out_of_stock}</div>
-              </div>
-              <div className="theme-card p-6 rounded-[4px] text-center">
-                <span className="text-[10px] uppercase font-bold tracking-widest block mb-2" style={{ color: 'var(--text-secondary)' }}>High Demand / Active Inquiries</span>
-                <div className="text-3xl font-mono font-bold animate-pulse" style={{ color: 'var(--kivi-cyan)' }}>
-                  {metrics.inventory.high_demand} Items
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[
+                { label: 'Stock Rate', value: `${metrics.inventory.stock_rate}%`, color: 'var(--kivi-success)' },
+                { label: 'In-Stock', value: metrics.inventory.in_stock, color: 'var(--text-primary)' },
+                { label: 'Low Stock', value: metrics.inventory.low_stock, color: 'var(--kivi-hazard)' },
+                { label: 'Out of Stock', value: metrics.inventory.out_of_stock, color: 'var(--kivi-error)' },
+              ].map(s => (
+                <div key={s.label} className="theme-card p-5 rounded-[4px] text-center">
+                  <span className="text-[10px] uppercase font-bold tracking-widest block mb-2" style={{ color: 'var(--text-secondary)' }}>{s.label}</span>
+                  <div className="text-3xl font-mono font-bold" style={{ color: s.color }}>{s.value}</div>
                 </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="theme-card p-5 rounded-[4px] text-center">
+                <span className="text-[10px] uppercase font-bold tracking-widest block mb-1" style={{ color: 'var(--text-secondary)' }}>Total Catalogue</span>
+                <div className="text-2xl font-mono font-bold" style={{ color: 'var(--text-primary)' }}>{metrics.inventory.total_active}</div>
+              </div>
+              <div className="theme-card p-5 rounded-[4px] text-center">
+                <span className="text-[10px] uppercase font-bold tracking-widest block mb-1" style={{ color: 'var(--text-secondary)' }}>Discontinued</span>
+                <div className="text-2xl font-mono font-bold" style={{ color: 'var(--text-muted)' }}>{metrics.inventory.discontinued}</div>
+              </div>
+              <div className="theme-card p-5 rounded-[4px] text-center">
+                <span className="text-[10px] uppercase font-bold tracking-widest block mb-1" style={{ color: 'var(--text-secondary)' }}>Stock Valuation</span>
+                <div className="text-2xl font-mono font-bold" style={{ color: 'var(--kivi-cyan)' }}>KES {metrics.inventory.total_valuation.toLocaleString()}</div>
               </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* High Traffic Chemicals */}
               <div className="theme-card p-6 rounded-[4px] space-y-4">
                 <h3 className="font-display font-bold text-sm uppercase tracking-wider flex items-center gap-2 border-b pb-3" style={{ color: 'var(--kivi-cyan)', borderColor: 'var(--border-divider)' }}>
                   <Eye size={16} /> Most Viewed Chemicals
                 </h3>
-                <div className="rounded overflow-hidden text-xs border" style={{ borderColor: 'var(--border-default)' }}>
-                  <table className="w-full text-left">
-                    <thead>
-                      <tr style={{ background: 'var(--bg-table-head)', borderBottom: '1px solid var(--border-divider)' }}>
-                        <th className="px-3 py-2" style={{ color: 'var(--text-secondary)' }}>Chemical Formula</th>
-                        <th className="px-3 py-2 text-right" style={{ color: 'var(--text-secondary)' }}>Views Count</th>
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr style={{ background: 'var(--bg-table-head)', borderBottom: '1px solid var(--border-divider)' }}>
+                      <th className="px-3 py-2 text-left" style={{ color: 'var(--text-secondary)' }}>Chemical</th>
+                      <th className="px-3 py-2 text-right" style={{ color: 'var(--text-secondary)' }}>Views</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {metrics.product_analytics.most_viewed.slice(0, 5).map((p, i) => (
+                      <tr key={i} className="border-b" style={{ borderColor: 'var(--border-table)' }}>
+                        <td className="px-3 py-2" style={{ color: 'var(--text-primary)' }}>{p.name}</td>
+                        <td className="px-3 py-2 text-right font-mono" style={{ color: 'var(--kivi-cyan)' }}>{p.view_count}</td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {metrics.product_analytics.most_viewed.slice(0, 5).map((p, idx) => (
-                        <tr key={idx} className="border-b" style={{ borderColor: 'var(--border-table)' }}>
-                          <td className="px-3 py-2 font-medium" style={{ color: 'var(--text-primary)' }}>{p.name}</td>
-                          <td className="px-3 py-2 text-right font-mono" style={{ color: 'var(--kivi-cyan)' }}>{p.view_count}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-
-              {/* High Quote Request Chemicals */}
               <div className="theme-card p-6 rounded-[4px] space-y-4">
                 <h3 className="font-display font-bold text-sm uppercase tracking-wider flex items-center gap-2 border-b pb-3" style={{ color: 'var(--kivi-cyan)', borderColor: 'var(--border-divider)' }}>
-                  <MessageSquare size={16} /> Procurement Demand Leaderboard
+                  <MessageSquare size={16} /> Procurement Demand
                 </h3>
-                <div className="rounded overflow-hidden text-xs border" style={{ borderColor: 'var(--border-default)' }}>
-                  <table className="w-full text-left">
-                    <thead>
-                      <tr style={{ background: 'var(--bg-table-head)', borderBottom: '1px solid var(--border-divider)' }}>
-                        <th className="px-3 py-2" style={{ color: 'var(--text-secondary)' }}>Chemical Name</th>
-                        <th className="px-3 py-2 text-right" style={{ color: 'var(--text-secondary)' }}>Quotes Submitted</th>
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr style={{ background: 'var(--bg-table-head)', borderBottom: '1px solid var(--border-divider)' }}>
+                      <th className="px-3 py-2 text-left" style={{ color: 'var(--text-secondary)' }}>Chemical</th>
+                      <th className="px-3 py-2 text-right" style={{ color: 'var(--text-secondary)' }}>Quotes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {metrics.product_analytics.most_requested.slice(0, 5).map((p, i) => (
+                      <tr key={i} className="border-b" style={{ borderColor: 'var(--border-table)' }}>
+                        <td className="px-3 py-2" style={{ color: 'var(--text-primary)' }}>{p.name}</td>
+                        <td className="px-3 py-2 text-right font-mono animate-pulse" style={{ color: 'var(--kivi-cyan)' }}>{p.quote_request_count}</td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {metrics.product_analytics.most_requested.slice(0, 5).map((p, idx) => (
-                        <tr key={idx} className="border-b" style={{ borderColor: 'var(--border-table)' }}>
-                          <td className="px-3 py-2 font-medium" style={{ color: 'var(--text-primary)' }}>{p.name}</td>
-                          <td className="px-3 py-2 text-right font-mono animate-pulse" style={{ color: 'var(--kivi-cyan)' }}>{p.quote_request_count}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
         )}
 
-        {/* ── 4. Security Tab ── */}
-        {activeTab === 'security' && metrics.security && (
+        {/* ── 4. Error Center Tab ── */}
+        {activeTab === 'errors' && (
+          <div className="space-y-6 animate-fade-in">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Bug size={18} style={{ color: 'var(--kivi-error)' }} />
+                <h2 className="font-display font-bold text-sm uppercase tracking-wider" style={{ color: 'var(--text-primary)' }}>System Error Log</h2>
+                <span className="text-[10px] px-2 py-0.5 rounded font-bold" style={{ background: 'var(--kivi-error-bg)', color: 'var(--kivi-error)' }}>
+                  {sysErrors.filter(e => e.status === 'unresolved').length} Unresolved
+                </span>
+              </div>
+              <button
+                onClick={handleResolveAll}
+                disabled={resolvingAll}
+                className="px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-[2px] transition-all"
+                style={{ background: 'var(--kivi-success-bg)', color: 'var(--kivi-success)', border: '1px solid var(--kivi-success)' }}
+              >
+                {resolvingAll ? 'Resolving...' : 'Resolve All'}
+              </button>
+            </div>
+
+            {errorsLoading ? (
+              <div className="flex items-center justify-center py-12"><RefreshCw className="animate-spin" style={{ color: 'var(--kivi-cyan)' }} /></div>
+            ) : sysErrors.length === 0 ? (
+              <div className="theme-card p-10 rounded-[4px] flex flex-col items-center gap-3 text-center">
+                <CheckCircle size={40} style={{ color: 'var(--kivi-success)' }} />
+                <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>No system errors logged</p>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>The error logging middleware has found no 4xx/5xx events.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {sysErrors.map(err => (
+                  <div key={err.id} className="theme-card p-4 rounded-[4px] flex items-start justify-between gap-4"
+                    style={{ opacity: err.status === 'resolved' ? 0.5 : 1 }}>
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      <span className="text-[10px] font-mono px-2 py-1 rounded mt-0.5 flex-shrink-0 font-bold"
+                        style={{ background: err.status_code >= 500 ? 'var(--kivi-error-bg)' : 'var(--kivi-hazard-bg)', color: err.status_code >= 500 ? 'var(--kivi-error)' : 'var(--kivi-hazard)' }}>
+                        {err.status_code || err.error_type?.toUpperCase()}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold truncate" style={{ color: 'var(--text-primary)' }}>{err.path || err.source}</div>
+                        <div className="text-[11px] mt-0.5 truncate" style={{ color: 'var(--text-secondary)' }}>{err.message}</div>
+                        <div className="text-[10px] mt-1 font-mono" style={{ color: 'var(--text-muted)' }}>{new Date(err.created_at).toLocaleString()}</div>
+                      </div>
+                    </div>
+                    {err.status !== 'resolved' && (
+                      <button onClick={() => handleResolveError(err.id)}
+                        className="flex-shrink-0 text-[10px] px-2 py-1 rounded font-bold uppercase tracking-wider"
+                        style={{ background: 'var(--kivi-success-bg)', color: 'var(--kivi-success)', border: '1px solid var(--kivi-success)' }}>
+                        Resolve
+                      </button>
+                    )}
+                    {err.status === 'resolved' && (
+                      <CheckCircle size={14} className="flex-shrink-0 mt-1" style={{ color: 'var(--kivi-success)' }} />
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── 5. AI Business Assistant Tab ── */}
+        {activeTab === 'assistant' && (
+          <div className="animate-fade-in" style={{ height: '600px', display: 'flex', flexDirection: 'column' }}>
+            <div className="flex items-center gap-3 pb-4 border-b mb-4" style={{ borderColor: 'var(--border-divider)' }}>
+              <Bot size={20} style={{ color: 'var(--kivi-cyan)' }} />
+              <div>
+                <h2 className="font-display font-bold text-sm uppercase tracking-wider" style={{ color: 'var(--text-primary)' }}>Kivi AI Business Assistant</h2>
+                <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>Context-aware: inventory, errors, analytics — all live from the database.</p>
+              </div>
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto space-y-4 pr-1" style={{ minHeight: 0 }}>
+              {chatHistory.map((msg, i) => (
+                <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
+                    style={{ background: msg.role === 'user' ? 'var(--kivi-cyan)' : 'var(--bg-card-alt)', border: '1px solid var(--border-card)' }}>
+                    {msg.role === 'user' ? <span className="text-[10px] font-black text-white">U</span> : <Bot size={12} style={{ color: 'var(--kivi-cyan)' }} />}
+                  </div>
+                  <div className="max-w-[80%] rounded-[4px] px-4 py-3 text-xs leading-relaxed"
+                    style={{
+                      background: msg.role === 'user' ? 'var(--kivi-cyan)' : 'var(--bg-card)',
+                      color: msg.role === 'user' ? '#fff' : 'var(--text-primary)',
+                      border: msg.role === 'user' ? 'none' : '1px solid var(--border-card)'
+                    }}>
+                    {msg.content}
+                  </div>
+                </div>
+              ))}
+              {chatLoading && (
+                <div className="flex gap-3">
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: 'var(--bg-card-alt)', border: '1px solid var(--border-card)' }}>
+                    <Bot size={12} style={{ color: 'var(--kivi-cyan)' }} />
+                  </div>
+                  <div className="px-4 py-3 rounded-[4px] text-xs" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-card)', color: 'var(--text-muted)' }}>
+                    <span className="animate-pulse">Thinking...</span>
+                  </div>
+                </div>
+              )}
+              <div ref={chatEndRef} />
+            </div>
+
+            {/* Input */}
+            <div className="flex gap-2 pt-4 border-t mt-4" style={{ borderColor: 'var(--border-divider)' }}>
+              <input
+                type="text"
+                value={chatInput}
+                onChange={e => setChatInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSendChat()}
+                placeholder="Ask about inventory, errors, revenue, content..." disabled={chatLoading}
+                className="flex-1 px-4 py-2.5 text-xs rounded-[2px] outline-none"
+                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-input)', color: 'var(--text-primary)' }}
+              />
+              <button onClick={handleSendChat} disabled={chatLoading || !chatInput.trim()}
+                className="px-4 py-2.5 rounded-[2px] flex items-center gap-2 text-xs font-bold uppercase tracking-wider transition-all"
+                style={{ background: 'var(--kivi-cyan)', color: '#fff', opacity: chatLoading || !chatInput.trim() ? 0.5 : 1 }}>
+                <Send size={13} /> Send
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── 6. Security Tab ── */}
+        {activeTab === 'security' && metrics?.security && (
           <div className="space-y-6 animate-fade-in">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="theme-card p-6 rounded-[4px] flex items-center justify-between">
@@ -605,7 +813,6 @@ export default function AdminDashboardPage() {
                 </div>
                 <Key className="opacity-40 w-10 h-10" style={{ color: 'var(--kivi-cyan)' }} />
               </div>
-
               <div className="theme-card p-6 rounded-[4px] flex items-center justify-between">
                 <div>
                   <span className="text-[10px] uppercase font-bold tracking-widest block mb-1" style={{ color: 'var(--text-secondary)' }}>New User Activity (7d)</span>
@@ -614,12 +821,10 @@ export default function AdminDashboardPage() {
                 <CheckCircle className="opacity-40 w-10 h-10" style={{ color: 'var(--kivi-success)' }} />
               </div>
             </div>
-
             <div className="theme-card p-6 rounded-[4px] space-y-4">
               <h3 className="font-display font-bold text-sm uppercase tracking-wider flex items-center gap-2 border-b pb-3" style={{ color: 'var(--kivi-cyan)', borderColor: 'var(--border-divider)' }}>
-                <ShieldAlert size={16} /> Security & System Audit Log
+                <ShieldAlert size={16} /> Security &amp; System Audit Log
               </h3>
-
               <div className="space-y-3 text-xs">
                 <div className="p-4 border rounded-[2px] flex items-start gap-3" style={{ background: 'var(--bg-card-alt)', borderColor: 'var(--border-card)' }}>
                   <Info size={16} className="mt-0.5 flex-shrink-0" style={{ color: 'var(--kivi-cyan)' }} />
@@ -628,7 +833,6 @@ export default function AdminDashboardPage() {
                     <p className="mt-1" style={{ color: 'var(--text-secondary)' }}>{metrics.security.rate_limit_note}</p>
                   </div>
                 </div>
-
                 <div className="p-4 border rounded-[2px] flex items-start gap-3" style={{ background: 'var(--bg-card-alt)', borderColor: 'var(--border-card)' }}>
                   <ShieldAlert size={16} className="mt-0.5 flex-shrink-0" style={{ color: 'var(--kivi-hazard)' }} />
                   <div>

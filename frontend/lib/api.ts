@@ -202,6 +202,43 @@ export const api = {
 
   async getSavedProducts(): Promise<any> {
     return apiRequest<any>('/products/saved/')
-  }
+  },
+
+  async getSystemErrors(params: Record<string, string> = {}): Promise<any> {
+    const q = new URLSearchParams(params).toString()
+    return apiRequest<any>(`/analytics/errors/${q ? `?${q}` : ''}`)
+  },
+
+  async resolveSystemError(id: number): Promise<any> {
+    return apiRequest<any>(`/analytics/errors/${id}/resolve/`, { method: 'POST' })
+  },
+
+  async resolveAllSystemErrors(): Promise<any> {
+    return apiRequest<any>('/analytics/errors/resolve-all/', { method: 'POST' })
+  },
+
+  async askAIAssistant(message: string, history: {role: string; content: string}[] = []): Promise<{ response: string; model: string }> {
+    return apiRequest<{ response: string; model: string }>('/ai/assistant/', {
+      method: 'POST',
+      body: JSON.stringify({ message, history }),
+    })
+  },
+
+  async uploadProductImage(file: File): Promise<{ original_url: string; optimized_url: string; thumbnail_url: string; public_id: string }> {
+    const formData = new FormData()
+    formData.append('file', file)
+    return apiRequest<any>('/products/upload-image/', { method: 'POST', body: formData })
+  },
+
+  async getInventoryLogs(): Promise<any> {
+    return apiRequest<any>('/products/inventory-logs/')
+  },
+
+  async updateStock(slug: string, data: { movement_type: string; quantity: number; reference?: string }): Promise<any> {
+    return apiRequest<any>(`/products/${slug}/update-stock/`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
 }
 

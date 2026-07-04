@@ -4,14 +4,19 @@ from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .models import Category, Product, SiteSetting, SavedProduct
-from .serializers import CategorySerializer, ProductSerializer, SiteSettingSerializer, SavedProductSerializer
+from .models import Category, Product, SiteSetting, SavedProduct, TechnicalDataSheet, StockMovementLog
+from .serializers import CategorySerializer, ProductSerializer, SiteSettingSerializer, SavedProductSerializer, TechnicalDataSheetSerializer, StockMovementLogSerializer
+import cloudinary.uploader
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
-    queryset = Category.objects.filter(is_active=True)
     serializer_class = CategorySerializer
     lookup_field = 'slug'
+
+    def get_queryset(self):
+        if self.request.user and self.request.user.is_staff:
+            return Category.objects.all()
+        return Category.objects.filter(is_active=True)
 
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
@@ -19,7 +24,8 @@ class CategoryViewSet(viewsets.ModelViewSet):
         return [permissions.IsAdminUser()]
 
     def list(self, request, *args, **kwargs):
-        cache_key = 'category_list'
+        is_admin = bool(request.user and request.user.is_staff)
+        cache_key = f'category_list_admin_{is_admin}'
         data = cache.get(cache_key)
         if not data:
             queryset = self.filter_queryset(self.get_queryset())
@@ -42,9 +48,13 @@ class CategoryViewSet(viewsets.ModelViewSet):
 
 
 class ProductViewSet(viewsets.ModelViewSet):
-    queryset = Product.objects.filter(is_active=True).select_related('category')
     serializer_class = ProductSerializer
     lookup_field = 'slug'
+
+    def get_queryset(self):
+        if self.request.user and self.request.user.is_staff:
+            return Product.objects.all().select_related('category')
+        return Product.objects.filter(is_active=True).select_related('category')
 
     def get_permissions(self):
         if self.action in ['list', 'retrieve', 'slugs', 'featured']:
@@ -52,7 +62,6 @@ class ProductViewSet(viewsets.ModelViewSet):
         return [permissions.IsAdminUser()]
 
     def list(self, request, *args, **kwargs):
-        # Handle query params in cache key
         query_params = request.query_params.urlencode()
         cache_key = f'product_list_{query_params}'
         data = cache.get(cache_key)
@@ -74,6 +83,16 @@ class ProductViewSet(viewsets.ModelViewSet):
                     Q(chemical_formula__icontains=search_query) |
                     Q(cas_number__icontains=search_query)
                 )
+                
+                # Log Search Query
+                try:
+                    from apps.analytics.models import SearchQueryLog
+                    SearchQueryLog.objects.create(
+                        query=search_query.strip(),
+                        results_count=queryset.count()
+                    )
+                except Exception:
+                    pass
 
             # Ordering
             ordering = request.query_params.get('ordering', '-is_featured')
@@ -99,7 +118,6 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def slugs(self, request):
-        # Public slug endpoint for generateStaticParams in SSG
         slugs = Product.objects.filter(is_active=True).values('slug')
         return Response(list(slugs))
 
@@ -107,6 +125,95 @@ class ProductViewSet(viewsets.ModelViewSet):
     def featured(self, request):
         featured_products = Product.objects.filter(is_active=True, is_featured=True)[:4]
         serializer = self.get_serializer(featured_products, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['get', 'put'], url_path='tds')
+    def tds(self, request, slug=None):
+        product = self.get_object()
+        
+        # Get or create TDS
+        tds, created = TechnicalDataSheet.objects.get_or_create(
+            product=product,
+            defaults={
+                'chemical_formula': product.chemical_formula,
+                'product_description': product.description,
+                'purity': product.purity,
+                'appearance': product.appearance,
+                'grade': product.grade,
+                'packaging': str(product.packaging),
+                'safety_info': product.safety_info,
+            }
+        )
+        
+        if request.method == 'GET':
+            serializer = TechnicalDataSheetSerializer(tds)
+            return Response(serializer.data)
+            
+        elif request.method == 'PUT':
+            serializer = TechnicalDataSheetSerializer(tds, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                
+                # Re-trigger PDF generation task in the background
+                try:
+                    from .tasks import generate_product_datasheet_task
+                    generate_product_datasheet_task.delay(product.id)
+                except Exception:
+                    pass
+                
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'], url_path='update-stock')
+    def update_stock(self, request, slug=None):
+        product = self.get_object()
+        movement_type = request.data.get('movement_type')
+        quantity = int(request.data.get('quantity', 0))
+        reference = request.data.get('reference', '')
+
+        if movement_type not in ['in', 'out', 'reserve', 'release']:
+            return Response({'error': 'Invalid movement type'}, status=status.HTTP_400_BAD_REQUEST)
+        if quantity <= 0:
+            return Response({'error': 'Quantity must be greater than zero'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if movement_type == 'in':
+            product.current_stock += quantity
+        elif movement_type == 'out':
+            if product.current_stock < quantity:
+                return Response({'error': 'Insufficient stock available'}, status=status.HTTP_400_BAD_REQUEST)
+            product.current_stock -= quantity
+        elif movement_type == 'reserve':
+            if (product.current_stock - product.reserved_stock) < quantity:
+                return Response({'error': 'Insufficient available stock to reserve'}, status=status.HTTP_400_BAD_REQUEST)
+            product.reserved_stock += quantity
+        elif movement_type == 'release':
+            if product.reserved_stock < quantity:
+                return Response({'error': 'Cannot release more than reserved stock'}, status=status.HTTP_400_BAD_REQUEST)
+            product.reserved_stock -= quantity
+
+        product.save()
+
+        # Log movement
+        StockMovementLog.objects.create(
+            product=product,
+            movement_type=movement_type,
+            quantity=quantity,
+            reference=reference,
+            created_by=request.user if request.user.is_authenticated else None
+        )
+
+        return Response(ProductSerializer(product).data)
+
+    @action(detail=False, methods=['get'], url_path='inventory-logs')
+    def inventory_logs(self, request):
+        logs = StockMovementLog.objects.all().select_related('product', 'created_by')
+        
+        page = self.paginate_queryset(logs)
+        if page is not None:
+            serializer = StockMovementLogSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+            
+        serializer = StockMovementLogSerializer(logs, many=True)
         return Response(serializer.data)
 
     def perform_create(self, serializer):
@@ -199,4 +306,50 @@ class SavedProductViewSet(viewsets.ModelViewSet):
             saved_item = SavedProduct.objects.create(user=request.user, product=product)
             serializer = self.get_serializer(saved_item)
             return Response({'saved': True, 'data': serializer.data, 'message': 'Product saved successfully'}, status=status.HTTP_201_CREATED)
+
+
+class ImageUploadView(APIView):
+    permission_classes = [permissions.IsAdminUser]
+
+    def post(self, request, *args, **kwargs):
+        uploaded_file = request.FILES.get('file') or request.FILES.get('image')
+        if not uploaded_file:
+            return Response({'error': 'No file uploaded'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            # Upload directly to Cloudinary
+            upload_result = cloudinary.uploader.upload(
+                uploaded_file,
+                folder="products",
+                resource_type="image"
+            )
+            
+            secure_url = upload_result.get('secure_url')
+            public_id = upload_result.get('public_id')
+            
+            # Generate optimized, webp, and thumbnail URLs using Cloudinary Transformations
+            optimized_url = secure_url.replace('/upload/', '/upload/q_auto,f_auto/')
+            webp_url = secure_url.replace('/upload/', '/upload/f_webp/')
+            thumbnail_url = secure_url.replace('/upload/', '/upload/c_thumb,w_200,h_200,g_auto/')
+            
+            return Response({
+                'original_url': secure_url,
+                'optimized_url': optimized_url,
+                'webp_url': webp_url,
+                'thumbnail_url': thumbnail_url,
+                'public_id': public_id,
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            # Log to system errors
+            try:
+                from apps.analytics.models import SystemError
+                SystemError.objects.create(
+                    error_type='cloudinary',
+                    source='ImageUploadView',
+                    message=str(e)
+                )
+            except Exception:
+                pass
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

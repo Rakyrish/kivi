@@ -286,3 +286,99 @@ Return ONLY a valid JSON object with this exact structure, no markdown wrappers,
         except Exception as e:
             log_ai_action("blog_manual", topic, "error", 0, str(e))
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class AIBusinessAssistantView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def post(self, request):
+        message = request.data.get('message', '').strip()
+        history = request.data.get('history', [])
+
+        if not message:
+            return Response({'error': 'message is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Build dynamic context from database
+        from apps.products.models import Product, Category
+        from apps.analytics.models import SystemError
+        from django.db.models import Count
+
+        low_stock_products = Product.objects.filter(is_active=True, product_status='low_stock').values('name', 'current_stock', 'reorder_level')
+        out_of_stock_products = Product.objects.filter(is_active=True, product_status='out_of_stock').values('name')
+        unresolved_errors = SystemError.objects.filter(status='unresolved').values('error_type', 'source', 'message')[:5]
+        category_counts = Category.objects.annotate(p_count=Count('products')).values('name', 'p_count')
+
+        context_str = "CURRENT SYSTEM STATE FOR KIVI CHEMICALS:\n"
+        context_str += f"- Total Products: {Product.objects.count()}\n"
+        context_str += f"- Categories:\n"
+        for cat in category_counts:
+            context_str += f"  * {cat['name']}: {cat['p_count']} products\n"
+        
+        context_str += f"- Low Stock Products:\n"
+        if low_stock_products:
+            for p in low_stock_products:
+                context_str += f"  * {p['name']} (Stock: {p['current_stock']}, Reorder at: {p['reorder_level']})\n"
+        else:
+            context_str += "  * None\n"
+            
+        context_str += f"- Out of Stock Products:\n"
+        if out_of_stock_products:
+            for p in out_of_stock_products:
+                context_str += f"  * {p['name']}\n"
+        else:
+            context_str += "  * None\n"
+            
+        context_str += f"- Unresolved Errors (last 5):\n"
+        if unresolved_errors:
+            for err in unresolved_errors:
+                context_str += f"  * [{err['error_type']}] in {err['source']}: {err['message']}\n"
+        else:
+            context_str += "  * None\n"
+
+        api_key = getattr(settings, 'OPENAI_API_KEY', '')
+        use_mock = not api_key or 'mock' in api_key.lower() or api_key == ''
+
+        if use_mock:
+            msg_lower = message.lower()
+            if 'error' in msg_lower or 'bug' in msg_lower:
+                if unresolved_errors:
+                    err_msg = ", ".join([f"{e['error_type']} in {e['source']}" for e in unresolved_errors])
+                    response_text = f"Yes, we currently have unresolved errors in the system: {err_msg}. Let me know if you would like me to draft a plan to resolve them."
+                else:
+                    response_text = "Good news! There are currently no unresolved system errors in the database."
+            elif 'stock' in msg_lower or 'inventory' in msg_lower:
+                if low_stock_products:
+                    low_msg = ", ".join([f"{p['name']} ({p['current_stock']} left)" for p in low_stock_products])
+                    response_text = f"Our records show the following products are low in stock: {low_msg}. We should coordinate with the suppliers to restock."
+                else:
+                    response_text = "All active products have healthy stock levels above their reorder thresholds."
+            elif 'category' in msg_lower or 'categories' in msg_lower:
+                cat_msg = ", ".join([f"{c['name']} ({c['p_count']})" for c in category_counts])
+                response_text = f"We have {Category.objects.count()} active product categories: {cat_msg}."
+            else:
+                response_text = f"Hello! I am your Kivi Chemicals B2B AI Assistant. I have analyzed your system dashboard. You currently have {Product.objects.count()} products, {Category.objects.count()} categories, and {SystemError.objects.filter(status='unresolved').count()} unresolved system errors. How can I help you manage the command center today?"
+            
+            return Response({'response': response_text, 'model': 'mock-gpt'})
+
+        import openai
+        client = openai.OpenAI(api_key=api_key)
+        messages = [
+            {"role": "system", "content": f"You are a helpful, professional AI Business Assistant for Kivi Chemicals B2B platform. You have access to real-time status data through the following context:\n\n{context_str}\n\nUse this data to answer the user's questions accurately. If they ask to write emails, blog outlines, or procurement notes, assist them in a professional B2B business tone."}
+        ]
+        
+        for hist in history:
+            messages.append({"role": hist.get('role', 'user'), "content": hist.get('content', '')})
+            
+        messages.append({"role": "user", "content": message})
+
+        try:
+            chat_completion = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=messages,
+                temperature=0.7,
+                max_tokens=800,
+            )
+            response_text = chat_completion.choices[0].message.content.strip()
+            return Response({'response': response_text, 'model': 'gpt-4o-mini'})
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

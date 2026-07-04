@@ -86,3 +86,66 @@ class AIGenerationLog(models.Model):
 
     def __str__(self):
         return f"{self.action_type} — {self.target_name} — {self.status}"
+
+
+class SystemError(models.Model):
+    ERROR_TYPES = [
+        ('404', '404 Not Found'),
+        ('500', '500 Server Error'),
+        ('api_failure', 'API Failure'),
+        ('database', 'Database Error'),
+        ('cloudinary', 'Cloudinary Error'),
+        ('openai', 'OpenAI Error'),
+        ('form_submission', 'Form Submission Failure'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('unresolved', 'Unresolved'),
+        ('resolved', 'Resolved'),
+    ]
+
+    error_type = models.CharField(max_length=50, choices=ERROR_TYPES)
+    source = models.CharField(max_length=255, help_text="e.g. URL pathway, view function, task name")
+    message = models.TextField()
+    stack_trace = models.TextField(blank=True)
+    count = models.IntegerField(default=1)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='unresolved')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.error_type} in {self.source} ({self.status})"
+
+
+class SearchQueryLog(models.Model):
+    query = models.CharField(max_length=255)
+    results_count = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"'{self.query}' - {self.results_count} results"
+
+
+class PerformanceMetric(models.Model):
+    performance_score = models.IntegerField()
+    seo_score = models.IntegerField()
+    accessibility_score = models.IntegerField()
+    best_practices_score = models.IntegerField()
+    lcp = models.FloatField(help_text="Largest Contentful Paint in seconds")
+    cls = models.FloatField(help_text="Cumulative Layout Shift")
+    inp = models.FloatField(help_text="Interaction to Next Paint in seconds")
+    fcp = models.FloatField(help_text="First Contentful Paint in seconds")
+    ttfb = models.FloatField(help_text="Time to First Byte in seconds")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Performance Audit — {self.created_at:%Y-%m-%d %H:%M} (Perf: {self.performance_score})"
