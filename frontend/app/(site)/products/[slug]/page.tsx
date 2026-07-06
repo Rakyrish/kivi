@@ -202,9 +202,9 @@ export default async function ProductDetailPage({
             <div className="lg:col-span-8 space-y-8 bg-white border border-kivi-gray-light p-6 md:p-8 rounded-kivi shadow-card">
               {/* Full Description */}
               <div className="space-y-4">
-                <h3 className="font-display font-black text-sm uppercase tracking-wider text-kivi-navy border-b border-kivi-cyan/15 pb-2">
+                <h2 className="font-display font-black text-sm uppercase tracking-wider text-kivi-navy border-b border-kivi-cyan/15 pb-2">
                   Chemical Description & Properties
-                </h3>
+                </h2>
                 <p className="text-sm leading-relaxed whitespace-pre-line text-kivi-gray font-sans">
                   {product.description}
                 </p>
@@ -213,9 +213,9 @@ export default async function ProductDetailPage({
               {/* Applications */}
               {product.applications && (Array.isArray(product.applications) ? product.applications.length > 0 : false) && (
                 <div className="space-y-4">
-                  <h3 className="font-display font-black text-sm uppercase tracking-wider text-kivi-navy border-b border-kivi-cyan/15 pb-2">
+                  <h2 className="font-display font-black text-sm uppercase tracking-wider text-kivi-navy border-b border-kivi-cyan/15 pb-2">
                     Primary Applications & Industry Uses
-                  </h3>
+                  </h2>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {Array.isArray(product.applications) && product.applications.map((app: string, index: number) => (
                       <div key={index} className="flex items-start gap-2.5 text-xs text-kivi-gray font-sans">
@@ -233,9 +233,9 @@ export default async function ProductDetailPage({
               {/* Specs Table */}
               {product.specifications && Object.keys(product.specifications).length > 0 && (
                 <div className="bg-kivi-surface border border-kivi-cyan/15 p-6 rounded-kivi text-kivi-white shadow-glow-cyan">
-                  <h3 className="font-display font-black text-xs uppercase tracking-wider text-kivi-cyan border-b border-kivi-cyan/10 pb-3 mb-4">
+                  <h2 className="font-display font-black text-xs uppercase tracking-wider text-kivi-cyan border-b border-kivi-cyan/10 pb-3 mb-4">
                     Technical Specifications
-                  </h3>
+                  </h2>
                   <div className="border border-kivi-cyan/10 rounded-kivi-sm overflow-hidden text-xs">
                     <table className="w-full text-left specs-table">
                       <tbody>
@@ -256,9 +256,9 @@ export default async function ProductDetailPage({
                 <div className="bg-kivi-error-bg border border-kivi-error text-kivi-navy p-6 rounded-kivi space-y-3">
                   <div className="flex items-center gap-2 text-kivi-error">
                     <AlertTriangle size={18} className="text-kivi-error" />
-                    <h3 className="font-display font-black text-xs uppercase tracking-wider text-kivi-error">
+                    <h2 className="font-display font-black text-xs uppercase tracking-wider text-kivi-error">
                       Safety & Handling Guidelines
-                    </h3>
+                    </h2>
                   </div>
                   <p className="text-xs leading-relaxed text-kivi-navy font-sans">
                     {product.safety_info}
@@ -271,9 +271,9 @@ export default async function ProductDetailPage({
           {/* Related Products */}
           {relatedProducts.length > 0 && (
             <div className="space-y-6">
-              <h3 className="font-display font-black text-lg text-kivi-navy uppercase tracking-wide">
+              <h2 className="font-display font-black text-lg text-kivi-navy uppercase tracking-wide">
                 Related Formulations
-              </h3>
+              </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {relatedProducts.map((p) => (
                   <ProductCard key={p.id} product={p} />

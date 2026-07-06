@@ -2,6 +2,8 @@ import { Metadata } from 'next'
 import { Mail, Phone, MapPin, Clock, MessageSquare } from 'lucide-react'
 import { buildMetadata } from '@/lib/seo'
 import { SITE } from '@/lib/constants'
+import { localBusinessSchema, contactPageSchema, breadcrumbSchema } from '@/lib/schema'
+import SchemaMarkup from '@/components/site/SchemaMarkup'
 import ContactForm from '@/components/site/ContactForm'
 
 export const metadata: Metadata = buildMetadata({
@@ -13,6 +15,14 @@ export const metadata: Metadata = buildMetadata({
 export default function ContactPage() {
   return (
     <div className="bg-[#F4F7FA] min-h-screen text-[#606060]">
+      <SchemaMarkup schema={localBusinessSchema()} />
+      <SchemaMarkup schema={contactPageSchema()} />
+      <SchemaMarkup
+        schema={breadcrumbSchema([
+          { name: 'Home', url: SITE.url },
+          { name: 'Contact', url: `${SITE.url}/contact` },
+        ])}
+      />
       {/* Header Banner */}
       <section className="bg-[#0D1B2A] py-16 text-[#F4F7FA] border-b border-[#00A0C0]/15">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4">

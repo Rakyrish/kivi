@@ -16,10 +16,11 @@ interface CatalogueClientProps {
   initialProducts: Product[]
   categories: Category[]
   initialCategory?: string
+  initialSearch?: string
 }
 
-export default function CatalogueClient({ initialProducts, categories, initialCategory = '' }: CatalogueClientProps) {
-  const [search, setSearch] = useState('')
+export default function CatalogueClient({ initialProducts, categories, initialCategory = '', initialSearch = '' }: CatalogueClientProps) {
+  const [search, setSearch] = useState(initialSearch)
   const [category, setCategory] = useState(initialCategory)
   const [availability, setAvailability] = useState('all')
   const [chemType, setChemType] = useState('All Types')
