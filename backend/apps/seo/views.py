@@ -4,7 +4,7 @@ from django.conf import settings
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import permissions
-from apps.products.models import Product, Category
+from apps.products.models import Product
 from apps.blog.models import BlogPost
 
 
@@ -12,7 +12,6 @@ class SitemapView(View):
     def get(self, request):
         base = getattr(settings, 'SITE_URL', 'https://kivichemicals.com')
         products = Product.objects.filter(is_active=True).values('slug', 'updated_at')
-        categories = Category.objects.filter(is_active=True).values('slug')
         posts = BlogPost.objects.filter(is_published=True).values('slug', 'updated_at')
 
         lines = ['<?xml version="1.0" encoding="UTF-8"?>',
@@ -34,9 +33,8 @@ class SitemapView(View):
                       f'<lastmod>{p["updated_at"].date()}</lastmod>'
                       f'<changefreq>weekly</changefreq><priority>0.85</priority></url>']
 
-        for c in categories:
-            lines += [f'<url><loc>{base}/products?category={c["slug"]}</loc>'
-                      f'<changefreq>weekly</changefreq><priority>0.75</priority></url>']
+        # /products?category=… URLs are intentionally excluded: they canonicalise
+        # to /products, and sitemaps should only list canonical URLs.
 
         for b in posts:
             lines += [f'<url><loc>{base}/blog/{b["slug"]}</loc>'
@@ -52,6 +50,8 @@ class RobotsView(View):
         base = getattr(settings, 'SITE_URL', 'https://kivichemicals.com')
         content = f"""User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /admin/
 Disallow: /django-admin/
 Disallow: /api/
 Disallow: /_next/

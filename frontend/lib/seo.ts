@@ -22,7 +22,8 @@ export function buildMetadata({
 
   const desc = description || SITE.description
   const url = `${SITE.url}${path}`
-  const ogImage = image || `${SITE.url}/og-default.jpg`
+  // /kivi.jpeg (1550x602) is the only brand image guaranteed to exist in /public
+  const ogImage = image || `${SITE.url}/kivi.jpeg`
 
   return {
     title: fullTitle,
@@ -35,7 +36,7 @@ export function buildMetadata({
       description: desc,
       url,
       siteName: SITE.name,
-      images: [{ url: ogImage, width: 1200, height: 630 }],
+      images: [{ url: ogImage, alt: fullTitle }],
       type,
       locale: 'en_KE',
     },

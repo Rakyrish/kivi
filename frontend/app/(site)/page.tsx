@@ -5,15 +5,22 @@ import {
   Droplets, Zap, Leaf, Building2, TestTubes, Waves, Beaker,
   ArrowRight, CheckCircle, Star
 } from 'lucide-react'
+import { Metadata } from 'next'
 import { SITE } from '@/lib/constants'
 import { api } from '@/lib/api'
-import { organizationSchema } from '@/lib/schema'
+import { buildMetadata } from '@/lib/seo'
+import { organizationSchema, websiteSchema, localBusinessSchema } from '@/lib/schema'
 import HeroSection from '@/components/site/HeroSection'
 import FeaturedProducts from '@/components/site/FeaturedProducts'
 import SchemaMarkup from '@/components/site/SchemaMarkup'
 import type { Product, Category } from '@/types'
 
 export const revalidate = 3600
+
+export const metadata: Metadata = buildMetadata({
+  description: SITE.description || `${SITE.name} supplies verified-quality industrial chemicals, solvents, and specialty formulations to manufacturers across Kenya and East Africa.`,
+  path: '',
+})
 
 async function getData() {
   let featuredProducts: Product[] = []
@@ -45,11 +52,12 @@ const WHY_KIVI = [
 
 export default async function HomePage() {
   const { featuredProducts, categories } = await getData()
-  const orgSchema = organizationSchema()
 
   return (
     <>
-      <SchemaMarkup schema={orgSchema} />
+      <SchemaMarkup schema={organizationSchema()} />
+      <SchemaMarkup schema={websiteSchema()} />
+      <SchemaMarkup schema={localBusinessSchema()} />
 
       {/* 1 — Hero */}
       <HeroSection productCount={featuredProducts.length} categoryCount={categories.length} />
@@ -189,7 +197,7 @@ export default async function HomePage() {
                     <Icon size={18} style={{ color: 'var(--kivi-cyan)' }} />
                   </div>
                   <div>
-                    <h4 className="font-display font-bold text-xs uppercase tracking-wide mb-2" style={{ color: 'var(--text-heading)' }}>{title}</h4>
+                    <h3 className="font-display font-bold text-xs uppercase tracking-wide mb-2" style={{ color: 'var(--text-heading)' }}>{title}</h3>
                     <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>{description}</p>
                   </div>
                 </div>

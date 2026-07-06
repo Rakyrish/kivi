@@ -16,7 +16,7 @@ type TabType = 'overview' | 'seo' | 'inventory' | 'errors' | 'assistant' | 'secu
 interface MetricsData {
   counts: {
     products: number
-    categories: numberhttps://finstarindustrialchemicals.com/_next/image?url=https%3A%2F%2Fres.cloudinary.com%2Fdboska3dn%2Fimage%2Fupload%2Fv1783066647%2Fproducts%2Frftqprlghc2meyu5xpdt.jpg&w=640&q=75
+    categories: number
     blog_posts: number
     leads: number
     quote_requests: number
