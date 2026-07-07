@@ -3,7 +3,6 @@ from django.utils.text import slugify
 from apps.products.models import Category, Product
 from apps.blog.models import BlogPost
 
-
 class Command(BaseCommand):
     help = 'Prepopulates database with default categories, initial products, and blog posts.'
 
@@ -28,16 +27,16 @@ class Command(BaseCommand):
             ("Rubber & Plastic", "Plasticizers, vulcanizing agents, blowing agents, and polymer stabilizers."),
             ("Textile Treatment", "Dyes, mordants, wetting agents, and finishing softeners for fabrics.")
         ]
-
         categories_map = {}
         for idx, (name, desc) in enumerate(categories_data):
             slug = slugify(name)
+            seo_title = f"{name} Supplier Kenya | Kivi Chemicals"[:60]
             cat, created = Category.objects.get_or_create(
                 slug=slug,
                 defaults={
                     'name': name,
                     'description': desc,
-                    'seo_title': f"{name} Supplier Kenya | Kivi Chemicals",
+                    'seo_title': seo_title,
                     'seo_description': desc[:150],
                     'order': idx,
                     'is_active': True
@@ -48,9 +47,7 @@ class Command(BaseCommand):
                 self.stdout.write(f"Created category: {name}")
 
         self.stdout.write('Seeding initial products...')
-        # Prepopulate 2 default products per category
         products_data = [
-            # Water Treatment
             {
                 'category_slug': 'water-treatment',
                 'name': 'Aluminium Sulphate (Alum)',
@@ -79,7 +76,6 @@ class Command(BaseCommand):
                 'safety_info': 'Strong oxidizer. Corrosive. Keep away from heat, open flames, and combustible materials. Avoid breathing dust.',
                 'is_featured': False
             },
-            # Solvents & Thinners
             {
                 'category_slug': 'solvents-thinners',
                 'name': 'Isopropyl Alcohol (IPA) 99%',
@@ -108,7 +104,6 @@ class Command(BaseCommand):
                 'safety_info': 'Highly flammable. Harmful if inhaled. May cause damage to organs through prolonged exposure. Keep container tightly closed in a cool, well-ventilated space.',
                 'is_featured': False
             },
-            # Cleaning & Disinfection
             {
                 'category_slug': 'cleaning-disinfection',
                 'name': 'Hydrogen Peroxide 50%',
@@ -123,7 +118,6 @@ class Command(BaseCommand):
                 'safety_info': 'Corrosive. Strong oxidizer. Contact with combustible material may cause fire. Wear personal protective equipment including chemical splash goggles.',
                 'is_featured': False
             },
-            # Detergents & Soaps
             {
                 'category_slug': 'detergents-soaps',
                 'name': 'Sodium Lauryl Ether Sulfate (SLES) 70%',
@@ -159,8 +153,8 @@ class Command(BaseCommand):
             cat = categories_map.get(cat_slug)
             if not cat:
                 continue
-
             slug = slugify(p_data['name'])
+            seo_title = f"{p_data['name']} Supplier Kenya | Kivi Chemicals"[:60]
             prod, created = Product.objects.get_or_create(
                 slug=slug,
                 defaults={
@@ -169,13 +163,13 @@ class Command(BaseCommand):
                     'chemical_formula': p_data.get('chemical_formula', ''),
                     'cas_number': p_data.get('cas_number', ''),
                     'grade': p_data.get('grade', ''),
-                    'un_number': p_data.get('un_number', ''),
+                    'un_number': p_data.get('un_number', '')[:20],
                     'short_description': p_data['short_description'],
                     'description': p_data['description'],
                     'applications': p_data.get('applications', []),
                     'specifications': p_data.get('specifications', {}),
                     'safety_info': p_data.get('safety_info', ''),
-                    'seo_title': f"{p_data['name']} Supplier Kenya | Kivi Chemicals",
+                    'seo_title': seo_title,
                     'seo_description': p_data['short_description'][:150],
                     'is_featured': p_data.get('is_featured', False),
                     'is_active': True,
@@ -185,12 +179,11 @@ class Command(BaseCommand):
             if created:
                 self.stdout.write(f"Created product: {p_data['name']}")
 
-        # For remaining categories without explicit products, let's create simple mock products so they are not empty
         for cat_slug, cat in categories_map.items():
-            # Check if this category has products
             if not cat.products.exists():
                 mock_name = f"Standard {cat.name} Compound"
                 mock_slug = slugify(mock_name)
+                seo_title = f"{mock_name} | Kivi Chemicals"[:60]
                 Product.objects.get_or_create(
                     slug=mock_slug,
                     defaults={
@@ -224,13 +217,15 @@ class Command(BaseCommand):
                 'title': 'Selecting the Right Coagulant for Wastewater Treatment Systems',
                 'summary': 'Comparing the efficacy of Aluminium Sulphate, Polyaluminium Chloride (PAC), and organic polymers in turbidity reduction.',
                 'content': 'Industrial effluent management requires choosing the right coagulants. Choosing between inorganic salts like Aluminium Sulphate (alum) or PAC depends heavily on raw water pH, organic load, and settling time constraints.\n\nAlum remains the most cost-effective solution for municipal systems with stable pH levels. However, Polyaluminium Chloride offers superior floc formation in low-temperature or fluctuating pH environments. Testing with jar tests is highly recommended before choosing your coagulants.',
-                'seo_title': 'Industrial Coagulant Selection Guide | Wastewater treatment',
+                'seo_title': 'Industrial Coagulant Selection Guide | Wastewater',
                 'seo_description': 'Compare Aluminium Sulphate, PAC, and organic polymers for industrial wastewater treatment clarification.'
             },
             {
                 'title': 'The Chemistry of Foam: SLES vs. LABSA in Liquid Soap Production',
                 'summary': 'An engineering analysis of anionic surfactant behaviors, synergy optimization, and salt-thickening kinetics.',
-                'content': 'Soap and detergent manufacturers rely heavily on anionic surfactants like Sodium Lauryl Ether Sulfate (SLES) and Linear Alkyl Benzene Sulfonic Acid (LABSA). While SLES provides high foam volume and skin mildness, LABSA offers robust cleaning performance against oil and dirt.\n\nOptimizing formulation yields requires balancing these two agents. A common ratio of 3:1 (SLES to LABSA) creates a synergetic cleaning performance, which can be thickened efficiently using Sodium Chloride (NaCl) under pH-adjusted parameters (neutralized using caustic soda).'
+                'content': 'Soap and detergent manufacturers rely heavily on anionic surfactants like Sodium Lauryl Ether Sulfate (SLES) and Linear Alkyl Benzene Sulfonic Acid (LABSA). While SLES provides high foam volume and skin mildness, LABSA offers robust cleaning performance against oil and dirt.\n\nOptimizing formulation yields requires balancing these two agents. A common ratio of 3:1 (SLES to LABSA) creates a synergetic cleaning performance, which can be thickened efficiently using Sodium Chloride (NaCl) under pH-adjusted parameters (neutralized using caustic soda).',
+                'seo_title': 'SLES vs LABSA in Soap Production | Kivi Chemicals',
+                'seo_description': 'Engineering analysis of SLES and LABSA surfactant behaviors and formulation optimization for liquid soap.'
             }
         ]
 
@@ -242,8 +237,8 @@ class Command(BaseCommand):
                     'title': b_data['title'],
                     'summary': b_data['summary'],
                     'content': b_data['content'],
-                    'seo_title': b_data.get('seo_title', b_data['title'][:60]),
-                    'seo_description': b_data.get('seo_description', b_data['summary'][:150]),
+                    'seo_title': b_data.get('seo_title', b_data['title'])[:60],
+                    'seo_description': b_data.get('seo_description', b_data['summary'])[:150],
                     'is_published': True
                 }
             )

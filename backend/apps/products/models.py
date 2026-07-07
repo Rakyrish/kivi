@@ -64,7 +64,7 @@ class Product(models.Model):
     # ── Chemical Properties ──
     chemical_formula = models.CharField(max_length=100, blank=True)   # e.g. NaOH
     cas_number = models.CharField(max_length=20, blank=True)           # e.g. 1310-73-2
-    un_number = models.CharField(max_length=10, blank=True)            # Hazmat UN number
+    un_number = models.CharField(max_length=20, blank=True)            # Hazmat UN number
     purity = models.CharField(max_length=50, blank=True)               # e.g. "99.0% min"
     molecular_weight = models.CharField(max_length=30, blank=True)     # e.g. "40.00 g/mol"
     appearance = models.CharField(max_length=150, blank=True)          # e.g. "White crystalline powder"

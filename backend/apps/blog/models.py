@@ -26,7 +26,7 @@ class BlogCategory(models.Model):
 class BlogPost(models.Model):
     # ── Identity ──
     title = models.CharField(max_length=200)
-    slug = models.SlugField(unique=True, blank=True)
+    slug = models.SlugField(unique=True, blank=True, max_length=200)
     category = models.ForeignKey(
         BlogCategory, on_delete=models.SET_NULL,
         null=True, blank=True, related_name='posts'
@@ -35,7 +35,6 @@ class BlogPost(models.Model):
         User, on_delete=models.SET_NULL,
         null=True, blank=True, related_name='blog_posts'
     )
-
     # ── Content ──
     content = models.TextField()
     summary = models.CharField(max_length=300, blank=True)
