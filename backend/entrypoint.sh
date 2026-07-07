@@ -23,6 +23,9 @@ python manage.py migrate --noinput
 echo "==> Seeding database default categories and products..."
 python manage.py seed_data
 
+echo "==> Seeding celery-beat periodic task schedule..."
+python manage.py seed_schedules
+
 echo "==> Collecting static files..."
 python manage.py collectstatic --noinput
 

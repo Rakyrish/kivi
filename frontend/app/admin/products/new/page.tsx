@@ -19,8 +19,8 @@ export default function NewProductPage() {
     <div className="space-y-8 max-w-5xl">
       {/* Header */}
       <div>
-        <h1 className="font-display font-black text-2xl text-[#F4F7FA] uppercase tracking-wide">Add New Product</h1>
-        <p className="text-xs text-[#606060] mt-1">Use the AI generator to auto-populate technical details, then review and publish.</p>
+        <h1 className="font-display font-black text-2xl uppercase tracking-wide" style={{ color: 'var(--text-primary)' }}>Add New Product</h1>
+        <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Use the AI generator to auto-populate technical details, then review and publish.</p>
       </div>
 
       {/* AI Generator Panel */}

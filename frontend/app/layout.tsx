@@ -55,8 +55,8 @@ export const metadata: Metadata = {
     images: [
       {
         url: '/kivi.jpeg',
-        width: 1200,
-        height: 630,
+        width: 1550,
+        height: 602,
         alt: `${SITE.name} — ${SITE.tagline}`,
       }
     ],

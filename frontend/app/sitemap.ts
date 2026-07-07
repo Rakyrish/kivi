@@ -1,62 +1,71 @@
 import { MetadataRoute } from 'next'
 import { api } from '@/lib/api'
 import { SITE } from '@/lib/constants'
+import type { Product, BlogPost, Category } from '@/types'
+
+async function getAllProducts(): Promise<Product[]> {
+  const all: Product[] = []
+  let page = 1
+  // Follow pagination so the sitemap never silently truncates the catalogue
+  while (page <= 20) {
+    try {
+      const res = await api.getProducts({ page, page_size: 100 })
+      const results = res.results || []
+      all.push(...results)
+      if (all.length >= (res.count || 0) || results.length === 0) break
+      page += 1
+    } catch {
+      break
+    }
+  }
+  return all
+}
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = SITE.url
 
-  let products: any[] = []
-  let categories: any[] = []
-  let posts: any[] = []
+  const products = await getAllProducts()
 
+  let posts: BlogPost[] = []
   try {
-    const res = await api.getProducts({ page_size: 100 })
-    products = res.results || []
-  } catch (e) {
-    // Fail silently to prevent build failures if backend is down
-  }
+    posts = (await api.getBlogPosts()).filter((p) => p.is_published !== false)
+  } catch {}
 
+  let categories: Category[] = []
   try {
     categories = await api.getCategories()
-  } catch (e) {}
+  } catch {}
 
-  try {
-    posts = await api.getBlogPosts()
-  } catch (e) {}
+  const routes: MetadataRoute.Sitemap = [
+    { url: `${base}`, changeFrequency: 'weekly', priority: 1.0 },
+    { url: `${base}/products`, changeFrequency: 'daily', priority: 0.9 },
+    { url: `${base}/blog`, changeFrequency: 'weekly', priority: 0.8 },
+    { url: `${base}/about`, changeFrequency: 'monthly', priority: 0.7 },
+    { url: `${base}/contact`, changeFrequency: 'monthly', priority: 0.7 },
+  ]
 
-  const routes = [
-    '',
-    '/products',
-    '/blog',
-    '/about',
-    '/contact',
-  ].map((route) => ({
-    url: `${base}${route}`,
-    lastModified: new Date(),
-    changeFrequency: 'weekly' as const,
-    priority: route === '' ? 1.0 : 0.8,
-  }))
-
-  const productRoutes = products.map((p) => ({
+  const productRoutes: MetadataRoute.Sitemap = products.map((p) => ({
     url: `${base}/products/${p.slug}`,
-    lastModified: new Date(p.updated_at || Date.now()),
-    changeFrequency: 'weekly' as const,
+    lastModified: p.updated_at ? new Date(p.updated_at) : undefined,
+    changeFrequency: 'weekly',
     priority: 0.85,
+    // Image sitemap entries — helps Google Images index product photos
+    ...(p.image ? { images: [p.image] } : {}),
   }))
 
-  const categoryRoutes = categories.map((c) => ({
+  const categoryRoutes: MetadataRoute.Sitemap = categories.map((c) => ({
     url: `${base}/categories/${c.slug}`,
-    lastModified: new Date(),
-    changeFrequency: 'weekly' as const,
-    priority: 0.75,
+    changeFrequency: 'weekly',
+    priority: 0.8,
+    ...(c.image ? { images: [c.image] } : {}),
   }))
 
-  const postRoutes = posts.map((b) => ({
+  const postRoutes: MetadataRoute.Sitemap = posts.map((b) => ({
     url: `${base}/blog/${b.slug}`,
-    lastModified: new Date(b.updated_at || Date.now()),
-    changeFrequency: 'monthly' as const,
+    lastModified: b.updated_at ? new Date(b.updated_at) : undefined,
+    changeFrequency: 'monthly',
     priority: 0.7,
   }))
 
-  return [...routes, ...productRoutes, ...categoryRoutes, ...postRoutes]
+  return [...routes, ...categoryRoutes, ...productRoutes, ...postRoutes]
 }

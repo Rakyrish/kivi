@@ -2,6 +2,8 @@ import { Metadata } from 'next'
 import { Award, ShieldCheck, Truck, Users, Beaker, Globe } from 'lucide-react'
 import { buildMetadata } from '@/lib/seo'
 import { SITE } from '@/lib/constants'
+import { breadcrumbSchema } from '@/lib/schema'
+import SchemaMarkup from '@/components/site/SchemaMarkup'
 
 export const metadata: Metadata = buildMetadata({
   title: 'About Us',
@@ -46,6 +48,12 @@ const values = [
 export default function AboutPage() {
   return (
     <div className="bg-[#F4F7FA] min-h-screen text-[#606060]">
+      <SchemaMarkup
+        schema={breadcrumbSchema([
+          { name: 'Home', url: SITE.url },
+          { name: 'About Us', url: `${SITE.url}/about` },
+        ])}
+      />
       {/* Hero Banner */}
       <section className="bg-[#0D1B2A] py-20 text-[#F4F7FA] relative overflow-hidden border-b border-[#00A0C0]/15">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#00A0C0_1px,transparent_1px),linear-gradient(to_bottom,#00A0C0_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-[0.03]" />

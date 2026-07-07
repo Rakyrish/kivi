@@ -51,7 +51,7 @@ export default async function AdminBlogPage() {
                 </tr>
               ) : (
                 posts.map((post) => (
-                  <tr key={post.id} className="border-b transition-colors" style={{ borderColor: 'var(--border-table)' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-table-row-alt)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                  <tr key={post.id} className="border-b transition-colors hover:bg-[var(--bg-table-row-alt)]" style={{ borderColor: 'var(--border-table)' }}>
                     <td className="px-5 py-3 font-bold max-w-xs truncate" style={{ color: 'var(--text-primary)' }}>
                       {post.title}
                     </td>

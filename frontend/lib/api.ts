@@ -168,6 +168,19 @@ export const api = {
     })
   },
 
+  async regenerateProduct(slug: string): Promise<{ status: string; slug: string; detail?: string }> {
+    return apiRequest(`/products/${slug}/regenerate/`, { method: 'POST' })
+  },
+
+  async regenerateProductsBulk(
+    payload: { slugs: string[] } | { all: true }
+  ): Promise<{ status: string; count: number; estimated_minutes: number }> {
+    return apiRequest('/products/regenerate-bulk/', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  },
+
   async generateAIProduct(productName: string, category: string): Promise<any> {
     return apiRequest<any>(API_ENDPOINTS.ai.generateProduct, {
       method: 'POST',
@@ -175,8 +188,15 @@ export const api = {
     })
   },
 
-  async generateAIProductFromForm(formData: FormData): Promise<any> {
+  async generateAIProductFromForm(payload: FormData | Record<string, any>): Promise<any> {
     return apiRequest<any>(API_ENDPOINTS.ai.generateProduct, {
+      method: 'POST',
+      body: payload instanceof FormData ? payload : JSON.stringify(payload),
+    })
+  },
+
+  async analyzeProductImage(formData: FormData): Promise<any> {
+    return apiRequest<any>(API_ENDPOINTS.ai.analyzeImage, {
       method: 'POST',
       body: formData,
     })
@@ -193,6 +213,10 @@ export const api = {
     return apiRequest<T>('/seo/audit/')
   },
 
+  async getContentQualityAudit<T>(refresh = false): Promise<T> {
+    return apiRequest<T>(`/seo/content-quality/${refresh ? '?refresh=1' : ''}`)
+  },
+
   async toggleSavedProduct(productSlug: string): Promise<any> {
     return apiRequest<any>('/products/saved/toggle/', {
       method: 'POST',
@@ -202,6 +226,66 @@ export const api = {
 
   async getSavedProducts(): Promise<any> {
     return apiRequest<any>('/products/saved/')
-  }
+  },
+
+  async runPerformanceAudit(strategy: 'mobile' | 'desktop' = 'mobile'): Promise<{ status: string; [key: string]: unknown }> {
+    return apiRequest('/analytics/performance/run-audit/', {
+      method: 'POST',
+      body: JSON.stringify({ strategy }),
+    })
+  },
+
+  async getSystemErrors(params: Record<string, string> = {}): Promise<any> {
+    const q = new URLSearchParams(params).toString()
+    return apiRequest<any>(`/analytics/errors/${q ? `?${q}` : ''}`)
+  },
+
+  async resolveSystemError(id: number): Promise<any> {
+    return apiRequest<any>(`/analytics/errors/${id}/resolve/`, { method: 'POST' })
+  },
+
+  async resolveAllSystemErrors(): Promise<any> {
+    return apiRequest<any>('/analytics/errors/resolve-all/', { method: 'POST' })
+  },
+
+  async askKiviAgent(
+    message: string,
+    sessionId: string,
+    history: { role: string; content: string }[] = []
+  ): Promise<{
+    reply: string
+    recommended_products: { name: string; slug: string }[]
+    show_contact_options: boolean
+    suggest_quote: boolean
+  }> {
+    return apiRequest(API_ENDPOINTS.ai.kiviAgent, {
+      method: 'POST',
+      body: JSON.stringify({ message, session_id: sessionId, history }),
+    })
+  },
+
+  async askAIAssistant(message: string, history: {role: string; content: string}[] = []): Promise<{ response: string; model: string }> {
+    return apiRequest<{ response: string; model: string }>('/ai/assistant/', {
+      method: 'POST',
+      body: JSON.stringify({ message, history }),
+    })
+  },
+
+  async uploadProductImage(file: File): Promise<{ original_url: string; optimized_url: string; thumbnail_url: string; public_id: string }> {
+    const formData = new FormData()
+    formData.append('file', file)
+    return apiRequest<any>('/products/upload-image/', { method: 'POST', body: formData })
+  },
+
+  async getInventoryLogs(): Promise<any> {
+    return apiRequest<any>('/products/inventory-logs/')
+  },
+
+  async updateStock(slug: string, data: { movement_type: string; quantity: number; reference?: string }): Promise<any> {
+    return apiRequest<any>(`/products/${slug}/update-stock/`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
 }
 

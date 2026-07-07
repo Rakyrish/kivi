@@ -6,6 +6,13 @@ export interface Category {
   seo_title?: string
   seo_description?: string
   image?: string
+  featured_image?: string
+  header_image?: string
+  overview_content?: string
+  benefits?: { title: string; description: string; icon?: string }[]
+  industries_served?: string[]
+  faq?: { question: string; answer: string }[]
+  is_featured?: boolean
   order: number
   is_active: boolean
   created_at: string
@@ -24,10 +31,20 @@ export interface Product {
   grade: string
   un_number: string
   short_description: string
+  introduction?: string
   description: string
   applications: string[]
+  applications_detailed?: { title: string; description: string }[]
+  benefits_content?: string
+  packaging_info?: string
+  storage_handling?: string
   specifications: Record<string, string>
   safety_info: string
+  ai_faq?: { question: string; answer: string }[]
+  ai_benefits?: string[]
+  ai_industries?: string[]
+  internal_links?: { title: string; slug: string }[]
+  external_references?: { title: string; url: string; nofollow?: boolean }[]
   seo_title: string
   seo_description: string
   keywords: string

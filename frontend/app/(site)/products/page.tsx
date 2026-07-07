@@ -15,12 +15,13 @@ export const metadata: Metadata = buildMetadata({
 export default async function ProductsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string }>
+  searchParams: Promise<{ category?: string; search?: string }>
 }) {
   let products: Product[] = []
   let categories: Category[] = []
   const resolvedSearchParams = await searchParams
   const initialCategory = resolvedSearchParams?.category || ''
+  const initialSearch = resolvedSearchParams?.search || ''
 
   try { const res = await api.getProducts({ page_size: 150 }); products = res.results || [] } catch {}
   try { categories = await api.getCategories() } catch {}
@@ -43,6 +44,7 @@ export default async function ProductsPage({
           initialProducts={products}
           categories={categories}
           initialCategory={initialCategory}
+          initialSearch={initialSearch}
         />
       </div>
     </div>

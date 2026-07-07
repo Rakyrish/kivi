@@ -5,6 +5,9 @@ import { Metadata } from 'next'
 import { ArrowLeft, Calendar } from 'lucide-react'
 import { api } from '@/lib/api'
 import { buildMetadata } from '@/lib/seo'
+import { articleSchema, breadcrumbSchema } from '@/lib/schema'
+import SchemaMarkup from '@/components/site/SchemaMarkup'
+import { SITE } from '@/lib/constants'
 
 export const revalidate = 3600 // ISR
 
@@ -53,8 +56,18 @@ export default async function BlogPostDetailPage({
   const post = await getPostData(resolvedParams.slug)
   if (!post) notFound()
 
+  const publishedDate = post.published_at || post.created_at
+
   return (
     <div className="bg-[#F4F7FA] min-h-screen py-12 text-[#606060]">
+      <SchemaMarkup schema={articleSchema(post)} />
+      <SchemaMarkup
+        schema={breadcrumbSchema([
+          { name: 'Home', url: SITE.url },
+          { name: 'Blog', url: `${SITE.url}/blog` },
+          { name: post.title, url: `${SITE.url}/blog/${post.slug}` },
+        ])}
+      />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         {/* Back Link */}
         <div>
@@ -72,13 +85,13 @@ export default async function BlogPostDetailPage({
           {/* Metadata */}
           <div className="flex items-center gap-2 text-[10px] text-[#94A3B8]">
             <Calendar size={12} />
-            <span className="font-mono">
-              {new Date(post.created_at).toLocaleDateString('en-KE', {
+            <time dateTime={publishedDate} className="font-mono">
+              {new Date(publishedDate).toLocaleDateString('en-KE', {
                 year: 'numeric',
                 month: 'short',
                 day: 'numeric',
               })}
-            </span>
+            </time>
           </div>
 
           {/* Title */}

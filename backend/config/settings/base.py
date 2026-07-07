@@ -1,7 +1,16 @@
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+# Load .env from the project root (one level above the backend directory)
+_env_path = BASE_DIR.parent / '.env'
+if _env_path.exists():
+    load_dotenv(_env_path, override=False)
+else:
+    # Fallback: try the backend dir itself
+    load_dotenv(BASE_DIR / '.env', override=False)
 
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-kivi-chemical-super-secret-key-12345')
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'
@@ -38,6 +47,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'apps.analytics.middleware.ErrorLoggingMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -126,6 +136,7 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'anon': '60/minute',
         'user': '200/minute',
+        'kivi_agent': '20/minute',
     },
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 24,
@@ -163,6 +174,18 @@ COMPANY_WHATSAPP = os.environ.get('COMPANY_WHATSAPP_NUMBER', '')
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
 OPENAI_MODEL = os.environ.get('OPENAI_MODEL', 'gpt-4o-mini')
 
+# Public site URL audited by PageSpeed Insights (the Next.js frontend)
+PUBLIC_SITE_URL = os.environ.get('NEXT_PUBLIC_SITE_URL', '')
+
+# Google PageSpeed Insights — key optional but strongly recommended (higher quota)
+PAGESPEED_API_KEY = os.environ.get('PAGESPEED_API_KEY', '')
+
+# Google Search Console — service account with webmasters.readonly scope,
+# added as a user on the GSC property. GSC_SITE_URL e.g. 'sc-domain:kivichemicals.com'
+GSC_SITE_URL = os.environ.get('GSC_SITE_URL', '')
+GOOGLE_SERVICE_ACCOUNT_FILE = os.environ.get('GOOGLE_SERVICE_ACCOUNT_FILE', '')
+GOOGLE_SERVICE_ACCOUNT_JSON = os.environ.get('GOOGLE_SERVICE_ACCOUNT_JSON', '')
+
 # Email setup
 EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
 RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
@@ -175,6 +198,16 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
+# No caller ever reads a task result (.get()/AsyncResult) — every task here is
+# fire-and-forget. Without this, Celery's redis result backend opens a pubsub
+# subscription on every .delay() call and, if the broker is unreachable, that
+# subscribe retries for ~19s before giving up, blocking the request that
+# triggered it (e.g. saving a Product from the admin).
+CELERY_TASK_IGNORE_RESULT = True
+# Bound the broker connection attempt itself so a down/unreachable broker
+# fails in ~1s instead of hanging the request.
+CELERY_BROKER_CONNECTION_TIMEOUT = 2
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 
 # Configure Celery Beat Scheduler
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'

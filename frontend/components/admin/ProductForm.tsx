@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Trash2, Save, Send, AlertCircle, CheckCircle } from 'lucide-react'
+import { Plus, Trash2, Save, AlertCircle, CheckCircle, ImageIcon, X, RefreshCw, Eye, Edit3, ShieldAlert } from 'lucide-react'
 import { Product, Category } from '@/types'
 import { api } from '@/lib/api'
 
@@ -10,6 +10,16 @@ interface ProductFormProps {
   categories: Category[]
   isEdit: boolean
   aiData?: any
+}
+
+// shared input style (theme-aware via CSS vars)
+const INPUT_CLS =
+  'w-full px-4 py-2.5 text-xs focus:outline-none transition-colors rounded-[2px]'
+
+const inputStyle = {
+  background: 'var(--bg-input)',
+  border: '1px solid var(--border-input)',
+  color: 'var(--text-primary)',
 }
 
 export default function ProductForm({ initialData, categories, isEdit, aiData }: ProductFormProps) {
@@ -42,13 +52,28 @@ export default function ProductForm({ initialData, categories, isEdit, aiData }:
   const [specVal, setSpecVal] = useState('')
 
   const [loading, setLoading] = useState(false)
+  const [regenLoading, setRegenLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
+
+  // View state: 'edit' or 'preview'
+  const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit')
+
+  // Confidence scores and validation state
+  const [confidenceScores, setConfidenceScores] = useState<Record<string, number>>({})
+  const [requiresReviewFields, setRequiresReviewFields] = useState<string[]>([])
+
+  // Image preview states
+  const [imagePreview, setImagePreview] = useState<string>('')
+  const [imageError, setImageError] = useState(false)
 
   // Bind initial data if editing
   useEffect(() => {
     if (initialData) {
       setFormData(initialData)
+      if (initialData.image) {
+        setImagePreview(initialData.image)
+      }
     }
   }, [initialData])
 
@@ -58,9 +83,33 @@ export default function ProductForm({ initialData, categories, isEdit, aiData }:
       setFormData((prev) => ({
         ...prev,
         ...aiData,
-        name: prev.name || aiData.name, // Keep existing name if typed
+        name: prev.name || aiData.name,
         ai_generated: true,
       }))
+      if (aiData.image) {
+        setImagePreview(aiData.image)
+      }
+      if (aiData.confidence_scores) {
+        setConfidenceScores(aiData.confidence_scores)
+        
+        // Find fields that require manual review (confidence < 80 or exact text)
+        const reviewList: string[] = []
+        Object.entries(aiData.confidence_scores).forEach(([field, val]) => {
+          if (Number(val) < 80) {
+            reviewList.push(field)
+          }
+        })
+        
+        // Also check if any string field has the placeholder text
+        Object.entries(aiData).forEach(([key, val]) => {
+          if (typeof val === 'string' && val.includes('Information requires manual verification.')) {
+            if (!reviewList.includes(key)) {
+              reviewList.push(key)
+            }
+          }
+        })
+        setRequiresReviewFields(reviewList)
+      }
     }
   }, [aiData])
 
@@ -70,6 +119,17 @@ export default function ProductForm({ initialData, categories, isEdit, aiData }:
     const { name, value, type } = e.target
     const val = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
     setFormData((prev) => ({ ...prev, [name]: val }))
+
+    // Remove field from review list when changed
+    if (requiresReviewFields.includes(name)) {
+      setRequiresReviewFields((prev) => prev.filter((f) => f !== name))
+    }
+
+    // Live image preview when URL changes
+    if (name === 'image') {
+      setImageError(false)
+      setImagePreview(value.trim())
+    }
   }
 
   const handleToggle = (name: keyof Product) => {
@@ -117,6 +177,53 @@ export default function ProductForm({ initialData, categories, isEdit, aiData }:
     })
   }
 
+  // Content regeneration trigger
+  const handleRegenerate = async () => {
+    if (!formData.name && !formData.image) {
+      setErrorMsg('Need a product name or image URL to regenerate content.')
+      return
+    }
+
+    setRegenLoading(true)
+    setErrorMsg('')
+    setSuccessMsg('')
+
+    try {
+      const payload = new FormData()
+      if (formData.name) payload.append('product_name', formData.name)
+      if (formData.category) {
+        const catObj = categories.find((c) => c.id === formData.category)
+        if (catObj) payload.append('category', catObj.name)
+      }
+      if (formData.image) payload.append('image_url', formData.image)
+
+      const freshData = await api.generateAIProductFromForm(payload)
+      setFormData((prev) => ({
+        ...prev,
+        ...freshData,
+        ai_generated: true,
+      }))
+      if (freshData.image) {
+        setImagePreview(freshData.image)
+      }
+      if (freshData.confidence_scores) {
+        setConfidenceScores(freshData.confidence_scores)
+        const reviewList: string[] = []
+        Object.entries(freshData.confidence_scores).forEach(([field, val]) => {
+          if (Number(val) < 80) {
+            reviewList.push(field)
+          }
+        })
+        setRequiresReviewFields(reviewList)
+      }
+      setSuccessMsg('Product content successfully regenerated via AI Vision.')
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Failed to regenerate product details.')
+    } finally {
+      setRegenLoading(false)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -133,7 +240,6 @@ export default function ProductForm({ initialData, categories, isEdit, aiData }:
       const saved = await api.saveProduct(formData, isEdit, initialData?.slug)
       setSuccessMsg(isEdit ? 'Product updated successfully.' : 'Product created successfully.')
       if (!isEdit) {
-        // Redirect or clear
         setFormData({
           name: '',
           slug: '',
@@ -157,6 +263,9 @@ export default function ProductForm({ initialData, categories, isEdit, aiData }:
           in_stock: true,
           ai_generated: false,
         })
+        setImagePreview('')
+        setConfidenceScores({})
+        setRequiresReviewFields([])
       } else {
         setFormData(saved)
       }
@@ -170,456 +279,839 @@ export default function ProductForm({ initialData, categories, isEdit, aiData }:
   const shortDescCount = formData.short_description?.length || 0
   const seoTitleCount = formData.seo_title?.length || 0
 
+  const SectionHeading = ({ children }: { children: React.ReactNode }) => (
+    <h3
+      className="font-display font-black text-sm uppercase tracking-wider border-b pb-3"
+      style={{ color: 'var(--text-primary)', borderColor: 'var(--border-divider)' }}
+    >
+      {children}
+    </h3>
+  )
+
+  const Label = ({ children }: { children: React.ReactNode }) => (
+    <label
+      className="text-[10px] uppercase font-bold tracking-wider block"
+      style={{ color: 'var(--text-muted)' }}
+    >
+      {children}
+    </label>
+  )
+
+  const onFocus = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    e.target.style.borderColor = 'var(--kivi-cyan)'
+  }
+  const onBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const isError = requiresReviewFields.includes(e.target.name)
+    e.target.style.borderColor = isError ? 'var(--kivi-error)' : 'var(--border-input)'
+  }
+
+  // Confidence Score Indicator Badge
+  const ConfidenceBadge = ({ field }: { field: string }) => {
+    const score = confidenceScores[field]
+    if (score === undefined) return null
+
+    let color = 'text-gray-400 border-gray-400 bg-gray-400/10'
+    let text = `${score}%`
+
+    if (score >= 90) {
+      color = 'text-emerald-500 border-emerald-500 bg-emerald-500/10'
+    } else if (score >= 70) {
+      color = 'text-amber-500 border-amber-500 bg-amber-500/10'
+    } else {
+      color = 'text-red-500 border-red-500 bg-red-500/10 animate-pulse'
+      text = `${score}%`
+    }
+
+    return (
+      <span
+        className={`inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-mono border ml-2 font-bold uppercase`}
+        style={{
+          color: score >= 90 ? 'var(--kivi-success)' : score >= 70 ? 'var(--kivi-hazard)' : 'var(--kivi-error)',
+          borderColor: score >= 90 ? 'var(--kivi-success)' : score >= 70 ? 'var(--kivi-hazard)' : 'var(--kivi-error)',
+          background: score >= 90 ? 'var(--kivi-success-bg)' : score >= 70 ? 'var(--kivi-hazard-bg)' : 'var(--kivi-error-bg)',
+        }}
+      >
+        AI Confidence: {text}
+      </span>
+    )
+  }
+
+  // Helper to determine styling of input with review issues
+  const getFieldInputStyle = (name: string) => {
+    const isError = requiresReviewFields.includes(name) || String(formData[name as keyof Product] || '').includes('Information requires manual verification.')
+    return {
+      ...inputStyle,
+      borderColor: isError ? 'var(--kivi-error)' : 'var(--border-input)',
+      boxShadow: isError ? '0 0 4px rgba(239, 68, 68, 0.25)' : 'none',
+    }
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Feedback banners */}
       {successMsg && (
-        <div className="flex items-center gap-3 bg-emerald-950/60 border border-emerald-500/30 text-emerald-200 p-4 rounded-[2px] text-xs">
-          <CheckCircle size={18} className="text-emerald-400" />
+        <div
+          className="flex items-center gap-3 p-4 rounded-[2px] text-xs"
+          style={{ background: 'var(--kivi-success-bg)', border: '1px solid var(--kivi-success)', color: 'var(--kivi-success)' }}
+        >
+          <CheckCircle size={18} />
           <span>{successMsg}</span>
         </div>
       )}
 
       {errorMsg && (
-        <div className="flex items-center gap-3 bg-red-950/60 border border-red-500/30 text-red-200 p-4 rounded-[2px] text-xs">
-          <AlertCircle size={18} className="text-red-400" />
+        <div
+          className="flex items-center gap-3 p-4 rounded-[2px] text-xs"
+          style={{ background: 'var(--kivi-error-bg)', border: '1px solid var(--kivi-error)', color: 'var(--kivi-error)' }}
+        >
+          <AlertCircle size={18} />
           <span>{errorMsg}</span>
         </div>
       )}
 
-      {/* Main product form */}
-      <div className="bg-[#081525] border border-[#00A0C0]/15 p-6 rounded-[4px] shadow-lg text-[#F4F7FA] space-y-6">
-        <h3 className="font-display font-black text-sm uppercase tracking-wider text-[#F4F7FA] border-b border-[#00A0C0]/10 pb-3">
-          Product Identity & Properties
-        </h3>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Manual Approval / Review Banner */}
+      {requiresReviewFields.length > 0 && (
+        <div
+          className="flex items-start gap-3 p-4 rounded-[4px] border"
+          style={{
+            background: 'var(--kivi-error-bg)',
+            borderColor: 'var(--kivi-error)',
+            color: 'var(--text-primary)',
+          }}
+        >
+          <ShieldAlert className="mt-0.5 flex-shrink-0" style={{ color: 'var(--kivi-error)' }} size={18} />
           <div className="space-y-1">
-            <label className="text-[10px] uppercase font-bold tracking-wider text-[#606060] block">
-              Product Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              required
-              disabled={loading}
-              className="w-full bg-[#002040]/30 border border-[#00A0C0]/15 focus:border-[#00A0C0] text-[#F4F7FA] px-4 py-2.5 text-xs focus:outline-none transition-colors rounded-[2px]"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-[10px] uppercase font-bold tracking-wider text-[#606060] block">
-              Slug (URL segment, auto-generated if blank)
-            </label>
-            <input
-              type="text"
-              name="slug"
-              value={formData.slug}
-              placeholder="e.g. sodium-hydroxide"
-              onChange={handleChange}
-              disabled={loading}
-              className="w-full bg-[#002040]/30 border border-[#00A0C0]/15 focus:border-[#00A0C0] text-[#F4F7FA] px-4 py-2.5 text-xs focus:outline-none transition-colors rounded-[2px]"
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="space-y-1 md:col-span-2">
-            <label className="text-[10px] uppercase font-bold tracking-wider text-[#606060] block">
-              Category
-            </label>
-            <select
-              name="category"
-              value={formData.category || ''}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  category: e.target.value ? Number(e.target.value) : undefined,
-                }))
-              }
-              disabled={loading}
-              className="w-full bg-[#081525] border border-[#00A0C0]/15 focus:border-[#00A0C0] text-[#F4F7FA] px-4 py-2.5 text-xs focus:outline-none transition-colors rounded-[2px]"
-            >
-              <option value="">Select Category...</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-[10px] uppercase font-bold tracking-wider text-[#606060] block">
-              Chemical Grade
-            </label>
-            <input
-              type="text"
-              name="grade"
-              placeholder="e.g. Technical / Food / Industrial"
-              value={formData.grade}
-              onChange={handleChange}
-              disabled={loading}
-              className="w-full bg-[#002040]/30 border border-[#00A0C0]/15 focus:border-[#00A0C0] text-[#F4F7FA] px-4 py-2.5 text-xs focus:outline-none transition-colors rounded-[2px]"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-[10px] uppercase font-bold tracking-wider text-[#606060] block">
-              Image URL
-            </label>
-            <input
-              type="text"
-              name="image"
-              placeholder="Cloudinary/External URL"
-              value={formData.image}
-              onChange={handleChange}
-              disabled={loading}
-              className="w-full bg-[#002040]/30 border border-[#00A0C0]/15 focus:border-[#00A0C0] text-[#F4F7FA] px-4 py-2.5 text-xs focus:outline-none transition-colors rounded-[2px]"
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="space-y-1">
-            <label className="text-[10px] uppercase font-bold tracking-wider text-[#606060] block">
-              Chemical Formula
-            </label>
-            <input
-              type="text"
-              name="chemical_formula"
-              placeholder="e.g. NaOH"
-              value={formData.chemical_formula}
-              onChange={handleChange}
-              disabled={loading}
-              className="w-full bg-[#002040]/30 border border-[#00A0C0]/15 focus:border-[#00A0C0] text-[#F4F7FA] px-4 py-2.5 text-xs focus:outline-none transition-colors rounded-[2px] font-mono"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-[10px] uppercase font-bold tracking-wider text-[#606060] block">
-              CAS Registry Number
-            </label>
-            <input
-              type="text"
-              name="cas_number"
-              placeholder="e.g. 1310-73-2"
-              value={formData.cas_number}
-              onChange={handleChange}
-              disabled={loading}
-              className="w-full bg-[#002040]/30 border border-[#00A0C0]/15 focus:border-[#00A0C0] text-[#F4F7FA] px-4 py-2.5 text-xs focus:outline-none transition-colors rounded-[2px] font-mono"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-[10px] uppercase font-bold tracking-wider text-[#606060] block">
-              UN Hazmat Number
-            </label>
-            <input
-              type="text"
-              name="un_number"
-              placeholder="e.g. UN1823"
-              value={formData.un_number}
-              onChange={handleChange}
-              disabled={loading}
-              className="w-full bg-[#002040]/30 border border-[#00A0C0]/15 focus:border-[#00A0C0] text-[#F4F7FA] px-4 py-2.5 text-xs focus:outline-none transition-colors rounded-[2px] font-mono"
-            />
-          </div>
-        </div>
-
-        {/* Content Section */}
-        <h3 className="font-display font-black text-sm uppercase tracking-wider text-[#F4F7FA] border-b border-[#00A0C0]/10 pt-4 pb-3">
-          Descriptions & Applications
-        </h3>
-
-        <div className="space-y-2">
-          <div className="flex justify-between items-center">
-            <label className="text-[10px] uppercase font-bold tracking-wider text-[#606060]">
-              Short Description (max 280 characters) <span className="text-red-500">*</span>
-            </label>
-            <span className={`text-[10px] font-mono ${shortDescCount > 280 ? 'text-red-400' : 'text-[#606060]'}`}>
-              {shortDescCount}/280
-            </span>
-          </div>
-          <input
-            type="text"
-            name="short_description"
-            value={formData.short_description}
-            onChange={handleChange}
-            maxLength={280}
-            required
-            disabled={loading}
-            className="w-full bg-[#002040]/30 border border-[#00A0C0]/15 focus:border-[#00A0C0] text-[#F4F7FA] px-4 py-2.5 text-xs focus:outline-none transition-colors rounded-[2px]"
-          />
-        </div>
-
-        <div className="space-y-1">
-          <label className="text-[10px] uppercase font-bold tracking-wider text-[#606060] block">
-            Full Description <span className="text-red-500">*</span>
-          </label>
-          <textarea
-            name="description"
-            rows={8}
-            value={formData.description}
-            onChange={handleChange}
-            required
-            disabled={loading}
-            className="w-full bg-[#002040]/30 border border-[#00A0C0]/15 focus:border-[#00A0C0] text-[#F4F7FA] px-4 py-3 text-xs focus:outline-none transition-colors rounded-[2px] resize-none h-48"
-          ></textarea>
-        </div>
-
-        {/* Applications tag builder */}
-        <div className="space-y-2">
-          <label className="text-[10px] uppercase font-bold tracking-wider text-[#606060] block">
-            Applications
-          </label>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              placeholder="Add application e.g. Soap manufacturing"
-              value={newApplication}
-              onChange={(e) => setNewApplication(e.target.value)}
-              className="flex-grow bg-[#002040]/30 border border-[#00A0C0]/15 focus:border-[#00A0C0] text-[#F4F7FA] px-4 py-2 text-xs focus:outline-none transition-colors rounded-[2px]"
-            />
-            <button
-              type="button"
-              onClick={addApplication}
-              className="px-4 py-2 bg-[#00A0C0] text-[#002040] hover:bg-[#00A0E0] text-xs font-bold uppercase rounded-[2px]"
-            >
-              Add
-            </button>
-          </div>
-          <div className="flex flex-wrap gap-2 pt-2">
-            {formData.applications?.map((app, i) => (
-              <span
-                key={i}
-                className="flex items-center gap-1.5 bg-[#002040] border border-[#00A0C0]/25 text-[#F4F7FA] px-3 py-1 rounded-[2px] text-xs"
-              >
-                {app}
-                <button
-                  type="button"
-                  onClick={() => removeApplication(i)}
-                  className="text-red-400 hover:text-red-300 ml-1"
+            <span className="text-xs font-bold uppercase tracking-wider block">Manual Approval &amp; Review Workflow</span>
+            <p className="text-[11px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+              AI has ingested product data, but some fields have low confidence or require manual validation. 
+              Review the fields highlighted in red below, correct them as needed, and approve by saving the product.
+            </p>
+            <div className="flex flex-wrap gap-1.5 pt-1.5">
+              {requiresReviewFields.map((field) => (
+                <span
+                  key={field}
+                  className="text-[8px] font-mono uppercase px-2 py-0.5 rounded-[2px] font-bold"
+                  style={{ background: 'var(--kivi-error-bg)', border: '1px solid var(--kivi-error)', color: 'var(--kivi-error)' }}
                 >
-                  &times;
-                </button>
-              </span>
-            ))}
+                  {field.replace('_', ' ')}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
+      )}
 
-        {/* Specifications dictionary builder */}
-        <div className="space-y-3">
-          <label className="text-[10px] uppercase font-bold tracking-wider text-[#606060] block">
-            Technical Specifications
-          </label>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              placeholder="Specification Key (e.g. Purity)"
-              value={specKey}
-              onChange={(e) => setSpecKey(e.target.value)}
-              className="w-1/3 bg-[#002040]/30 border border-[#00A0C0]/15 focus:border-[#00A0C0] text-[#F4F7FA] px-4 py-2 text-xs focus:outline-none transition-colors rounded-[2px]"
-            />
-            <input
-              type="text"
-              placeholder="Specification Value (e.g. 99% min)"
-              value={specVal}
-              onChange={(e) => setSpecVal(e.target.value)}
-              className="flex-grow bg-[#002040]/30 border border-[#00A0C0]/15 focus:border-[#00A0C0] text-[#F4F7FA] px-4 py-2 text-xs focus:outline-none transition-colors rounded-[2px]"
-            />
-            <button
-              type="button"
-              onClick={addSpecification}
-              className="px-4 py-2 bg-[#00A0C0] text-[#002040] hover:bg-[#00A0E0] text-xs font-bold uppercase rounded-[2px]"
-            >
-              Add Spec
-            </button>
-          </div>
-          <div className="border border-[#00A0C0]/10 rounded-[2px] overflow-hidden mt-3">
-            <table className="w-full text-xs text-left">
-              <thead>
-                <tr className="bg-[#002040]/50 text-[#00A0C0] border-b border-[#00A0C0]/15 font-display">
-                  <th className="px-4 py-2">Parameter</th>
-                  <th className="px-4 py-2">Value</th>
-                  <th className="px-4 py-2 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Object.entries(formData.specifications || {}).map(([key, val]) => (
-                  <tr key={key} className="border-b border-[#00A0C0]/5 font-mono">
-                    <td className="px-4 py-2 font-bold text-[#F4F7FA]">{key}</td>
-                    <td className="px-4 py-2">{val}</td>
-                    <td className="px-4 py-2 text-right">
-                      <button
-                        type="button"
-                        onClick={() => removeSpecification(key)}
-                        className="text-red-400 hover:text-red-300"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-                {Object.keys(formData.specifications || {}).length === 0 && (
-                  <tr>
-                    <td colSpan={3} className="px-4 py-4 text-center text-[#606060]">
-                      No technical specifications added yet.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div className="space-y-1">
-          <label className="text-[10px] uppercase font-bold tracking-wider text-[#606060] block">
-            Safety & Handling Information
-          </label>
-          <textarea
-            name="safety_info"
-            rows={3}
-            placeholder="Handling guidelines, hazards, storage recommendations..."
-            value={formData.safety_info}
-            onChange={handleChange}
-            disabled={loading}
-            className="w-full bg-[#002040]/30 border border-[#00A0C0]/15 focus:border-[#00A0C0] text-[#F4F7FA] px-4 py-2.5 text-xs focus:outline-none transition-colors rounded-[2px] h-24"
-          ></textarea>
-        </div>
-
-        {/* SEO Parameters */}
-        <h3 className="font-display font-black text-sm uppercase tracking-wider text-[#F4F7FA] border-b border-[#00A0C0]/10 pt-4 pb-3">
-          SEO & Search Meta Tags
-        </h3>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <label className="text-[10px] uppercase font-bold tracking-wider text-[#606060]">
-                SEO Title (max 60 characters)
-              </label>
-              <span className={`text-[10px] font-mono ${seoTitleCount > 60 ? 'text-red-400' : 'text-[#606060]'}`}>
-                {seoTitleCount}/60
-              </span>
-            </div>
-            <input
-              type="text"
-              name="seo_title"
-              value={formData.seo_title}
-              onChange={handleChange}
-              maxLength={60}
-              disabled={loading}
-              className="w-full bg-[#002040]/30 border border-[#00A0C0]/15 focus:border-[#00A0C0] text-[#F4F7FA] px-4 py-2.5 text-xs focus:outline-none transition-colors rounded-[2px]"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-[10px] uppercase font-bold tracking-wider text-[#606060] block">
-              Keywords (comma-separated list)
-            </label>
-            <input
-              type="text"
-              name="keywords"
-              placeholder="e.g. sodium hydroxide Kenya, buy caustic soda Nairobi"
-              value={formData.keywords}
-              onChange={handleChange}
-              disabled={loading}
-              className="w-full bg-[#002040]/30 border border-[#00A0C0]/15 focus:border-[#00A0C0] text-[#F4F7FA] px-4 py-2.5 text-xs focus:outline-none transition-colors rounded-[2px]"
-            />
-          </div>
-        </div>
-
-        <div className="space-y-1">
-          <label className="text-[10px] uppercase font-bold tracking-wider text-[#606060] block">
-            SEO Meta Description (max 160 characters)
-          </label>
-          <input
-            type="text"
-            name="seo_description"
-            value={formData.seo_description}
-            onChange={handleChange}
-            maxLength={160}
-            disabled={loading}
-            className="w-full bg-[#002040]/30 border border-[#00A0C0]/15 focus:border-[#00A0C0] text-[#F4F7FA] px-4 py-2.5 text-xs focus:outline-none transition-colors rounded-[2px]"
-          />
-        </div>
-
-        {/* Toggles */}
-        <h3 className="font-display font-black text-sm uppercase tracking-wider text-[#F4F7FA] border-b border-[#00A0C0]/10 pt-4 pb-3">
-          Toggles & Statuses
-        </h3>
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={formData.is_active}
-              onChange={() => handleToggle('is_active')}
-              disabled={loading}
-              className="w-4 h-4 bg-[#081525] border border-[#00A0C0]/15 accent-[#00A0C0] rounded-[2px]"
-            />
-            <div className="flex flex-col">
-              <span className="text-xs font-bold text-[#F4F7FA]">Active Catalog</span>
-              <span className="text-[9px] text-[#606060]">Visible to site visitors</span>
-            </div>
-          </label>
-
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={formData.is_featured}
-              onChange={() => handleToggle('is_featured')}
-              disabled={loading}
-              className="w-4 h-4 bg-[#081525] border border-[#00A0C0]/15 accent-[#00A0C0] rounded-[2px]"
-            />
-            <div className="flex flex-col">
-              <span className="text-xs font-bold text-[#F4F7FA]">Featured Product</span>
-              <span className="text-[9px] text-[#606060]">Show on home page grid</span>
-            </div>
-          </label>
-
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={formData.in_stock}
-              onChange={() => handleToggle('in_stock')}
-              disabled={loading}
-              className="w-4 h-4 bg-[#081525] border border-[#00A0C0]/15 accent-[#00A0C0] rounded-[2px]"
-            />
-            <div className="flex flex-col">
-              <span className="text-xs font-bold text-[#F4F7FA]">In Stock</span>
-              <span className="text-[9px] text-[#606060]">Available for ordering</span>
-            </div>
-          </label>
-
-          <label className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              checked={formData.ai_generated}
-              disabled
-              className="w-4 h-4 bg-[#081525] border border-[#00A0C0]/15 rounded-[2px] opacity-50"
-            />
-            <div className="flex flex-col">
-              <span className="text-xs font-bold text-[#F4F7FA] opacity-50">AI Generated</span>
-              <span className="text-[9px] text-[#606060]">Populated by OpenAI LLM</span>
-            </div>
-          </label>
-        </div>
-
-        {/* Buttons */}
-        <div className="flex justify-end gap-4 pt-6 border-t border-[#00A0C0]/10">
+      {/* Tab Selector & Actions bar */}
+      <div className="flex items-center justify-between border-b pb-1" style={{ borderColor: 'var(--border-divider)' }}>
+        <div className="flex gap-2">
           <button
-            type="submit"
-            disabled={loading}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-[#00A0C0] text-[#002040] hover:bg-[#00A0E0] transition-colors text-xs font-bold uppercase tracking-wider rounded-[2px]"
+            type="button"
+            onClick={() => setActiveTab('edit')}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors border-b-2"
+            style={{
+              borderColor: activeTab === 'edit' ? 'var(--kivi-cyan)' : 'transparent',
+              color: activeTab === 'edit' ? 'var(--text-primary)' : 'var(--text-muted)',
+            }}
           >
-            <Save size={14} />
-            {isEdit ? 'Save Changes' : 'Publish Product'}
+            <Edit3 size={13} />
+            Edit Form
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('preview')}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors border-b-2"
+            style={{
+              borderColor: activeTab === 'preview' ? 'var(--kivi-cyan)' : 'transparent',
+              color: activeTab === 'preview' ? 'var(--text-primary)' : 'var(--text-muted)',
+            }}
+          >
+            <Eye size={13} />
+            Preview Catalog Page
+          </button>
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={handleRegenerate}
+            disabled={regenLoading || loading}
+            className="inline-flex items-center gap-2 px-3 py-1.5 border rounded-[2px] transition-colors text-[10px] font-bold uppercase tracking-wider disabled:opacity-60"
+            style={{ borderColor: 'var(--border-divider)', color: 'var(--text-secondary)' }}
+          >
+            <RefreshCw size={11} className={regenLoading ? 'animate-spin' : ''} />
+            Regenerate Content
           </button>
         </div>
       </div>
+
+      {activeTab === 'edit' ? (
+        /* ── EDIT TAB ── */
+        <div
+          className="p-6 rounded-[4px] space-y-6"
+          style={{
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-card)',
+            boxShadow: 'var(--shadow-card)',
+            color: 'var(--text-primary)',
+          }}
+        >
+          <SectionHeading>Product Identity &amp; Properties</SectionHeading>
+
+          {/* Row 1: Name + Slug */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-1">
+              <div className="flex items-center">
+                <Label>Product Name <span style={{ color: 'var(--kivi-error)' }}>*</span></Label>
+                <ConfidenceBadge field="name" />
+              </div>
+              <input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                onFocus={onFocus}
+                onBlur={onBlur}
+                required
+                disabled={loading}
+                className={INPUT_CLS}
+                style={getFieldInputStyle('name')}
+              />
+              {String(formData.name).includes('Information requires manual verification.') && (
+                <p className="text-[10px]" style={{ color: 'var(--kivi-error)' }}>⚠️ Please provide a valid product name.</p>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex items-center">
+                <Label>Slug (URL segment, auto-generated if blank)</Label>
+              </div>
+              <input
+                type="text"
+                name="slug"
+                value={formData.slug}
+                placeholder="e.g. sodium-hydroxide"
+                onChange={handleChange}
+                onFocus={onFocus}
+                onBlur={onBlur}
+                disabled={loading}
+                className={INPUT_CLS}
+                style={getFieldInputStyle('slug')}
+              />
+            </div>
+          </div>
+
+          {/* Row 2: Category + Grade + Image URL */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="space-y-1 md:col-span-2">
+              <div className="flex items-center">
+                <Label>Category</Label>
+                <ConfidenceBadge field="suggested_category" />
+              </div>
+              <select
+                name="category"
+                value={formData.category || ''}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    category: e.target.value ? Number(e.target.value) : undefined,
+                  }))
+                }
+                onFocus={onFocus}
+                onBlur={onBlur}
+                disabled={loading}
+                className={INPUT_CLS}
+                style={getFieldInputStyle('category')}
+              >
+                <option value="">Select Category...</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex items-center">
+                <Label>Chemical Grade</Label>
+                <ConfidenceBadge field="grade" />
+              </div>
+              <input
+                type="text"
+                name="grade"
+                placeholder="e.g. Technical / Food / Industrial"
+                value={formData.grade}
+                onChange={handleChange}
+                onFocus={onFocus}
+                onBlur={onBlur}
+                disabled={loading}
+                className={INPUT_CLS}
+                style={getFieldInputStyle('grade')}
+              />
+            </div>
+
+            {/* Image URL with live preview */}
+            <div className="space-y-1">
+              <Label>Image URL</Label>
+              <input
+                type="text"
+                name="image"
+                placeholder="Cloudinary / External URL"
+                value={formData.image}
+                onChange={handleChange}
+                onFocus={onFocus}
+                onBlur={onBlur}
+                disabled={loading}
+                className={INPUT_CLS}
+                style={inputStyle}
+              />
+            </div>
+          </div>
+
+          {/* Image preview */}
+          {imagePreview && !imageError && (
+            <div
+              className="relative rounded-[4px] overflow-hidden border"
+              style={{ borderColor: 'var(--border-card)', background: 'var(--bg-card-alt)' }}
+            >
+              <div className="flex items-center gap-2 px-4 py-2 border-b" style={{ borderColor: 'var(--border-divider)' }}>
+                <ImageIcon size={13} style={{ color: 'var(--kivi-cyan)' }} />
+                <span className="text-[10px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                  Image Preview
+                </span>
+                <button
+                  type="button"
+                  className="ml-auto p-1 rounded transition-colors"
+                  style={{ color: 'var(--text-muted)' }}
+                  onClick={() => {
+                    setImagePreview('')
+                    setFormData((prev) => ({ ...prev, image: '' }))
+                  }}
+                  title="Clear image"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+              <div className="relative w-full" style={{ height: '180px' }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={imagePreview}
+                  alt="Product preview"
+                  className="w-full h-full object-contain p-2"
+                  onError={() => setImageError(true)}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Row 3: Formula + CAS + UN */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="space-y-1">
+              <div className="flex items-center">
+                <Label>Chemical Formula</Label>
+                <ConfidenceBadge field="chemical_formula" />
+              </div>
+              <input
+                type="text"
+                name="chemical_formula"
+                placeholder="e.g. NaOH"
+                value={formData.chemical_formula}
+                onChange={handleChange}
+                onFocus={onFocus}
+                onBlur={onBlur}
+                disabled={loading}
+                className={`${INPUT_CLS} font-mono`}
+                style={getFieldInputStyle('chemical_formula')}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex items-center">
+                <Label>CAS Registry Number</Label>
+                <ConfidenceBadge field="cas_number" />
+              </div>
+              <input
+                type="text"
+                name="cas_number"
+                placeholder="e.g. 1310-73-2"
+                value={formData.cas_number}
+                onChange={handleChange}
+                onFocus={onFocus}
+                onBlur={onBlur}
+                disabled={loading}
+                className={`${INPUT_CLS} font-mono`}
+                style={getFieldInputStyle('cas_number')}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex items-center">
+                <Label>UN Hazmat Number</Label>
+                <ConfidenceBadge field="un_number" />
+              </div>
+              <input
+                type="text"
+                name="un_number"
+                placeholder="e.g. UN1823"
+                value={formData.un_number}
+                onChange={handleChange}
+                onFocus={onFocus}
+                onBlur={onBlur}
+                disabled={loading}
+                className={`${INPUT_CLS} font-mono`}
+                style={getFieldInputStyle('un_number')}
+              />
+            </div>
+          </div>
+
+          {/* ── Descriptions & Applications ── */}
+          <SectionHeading>Descriptions &amp; Applications</SectionHeading>
+
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center">
+                <Label>
+                  Short Description (max 280 characters) <span style={{ color: 'var(--kivi-error)' }}>*</span>
+                </Label>
+                <ConfidenceBadge field="short_description" />
+              </div>
+              <span
+                className="text-[10px] font-mono"
+                style={{ color: shortDescCount > 280 ? 'var(--kivi-error)' : 'var(--text-muted)' }}
+              >
+                {shortDescCount}/280
+              </span>
+            </div>
+            <input
+              type="text"
+              name="short_description"
+              value={formData.short_description}
+              onChange={handleChange}
+              onFocus={onFocus}
+              onBlur={onBlur}
+              maxLength={280}
+              required
+              disabled={loading}
+              className={INPUT_CLS}
+              style={getFieldInputStyle('short_description')}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <div className="flex items-center mb-1">
+              <Label>
+                Full Description <span style={{ color: 'var(--kivi-error)' }}>*</span>
+              </Label>
+              <ConfidenceBadge field="description" />
+            </div>
+            <textarea
+              name="description"
+              rows={8}
+              value={formData.description}
+              onChange={handleChange}
+              onFocus={onFocus}
+              onBlur={onBlur}
+              required
+              disabled={loading}
+              className="w-full px-4 py-3 text-xs focus:outline-none transition-colors rounded-[2px] resize-none h-48"
+              style={getFieldInputStyle('description')}
+            />
+          </div>
+
+          {/* Applications tag builder */}
+          <div className="space-y-2">
+            <Label>Applications</Label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Add application e.g. Soap manufacturing"
+                value={newApplication}
+                onChange={(e) => setNewApplication(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addApplication())}
+                className="flex-grow px-4 py-2 text-xs focus:outline-none transition-colors rounded-[2px]"
+                style={inputStyle}
+                onFocus={onFocus}
+                onBlur={onBlur}
+              />
+              <button
+                type="button"
+                onClick={addApplication}
+                className="px-4 py-2 text-xs font-bold uppercase rounded-[2px] transition-colors"
+                style={{ background: 'var(--kivi-cyan)', color: '#002040' }}
+              >
+                Add
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2 pt-2">
+              {formData.applications?.map((app, i) => (
+                <span
+                  key={i}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-[2px] text-xs border"
+                  style={{
+                    background: 'var(--bg-card-alt)',
+                    borderColor: 'var(--border-card)',
+                    color: 'var(--text-primary)',
+                  }}
+                >
+                  {app}
+                  <button
+                    type="button"
+                    onClick={() => removeApplication(i)}
+                    className="ml-1 transition-colors"
+                    style={{ color: 'var(--kivi-error)' }}
+                  >
+                    &times;
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Specifications dictionary builder */}
+          <div className="space-y-3">
+            <div className="flex items-center">
+              <Label>Technical Specifications</Label>
+              <ConfidenceBadge field="specifications" />
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Specification Key (e.g. Purity)"
+                value={specKey}
+                onChange={(e) => setSpecKey(e.target.value)}
+                className="w-1/3 px-4 py-2 text-xs focus:outline-none transition-colors rounded-[2px]"
+                style={inputStyle}
+                onFocus={onFocus}
+                onBlur={onBlur}
+              />
+              <input
+                type="text"
+                placeholder="Specification Value (e.g. 99% min)"
+                value={specVal}
+                onChange={(e) => setSpecVal(e.target.value)}
+                className="flex-grow px-4 py-2 text-xs focus:outline-none transition-colors rounded-[2px]"
+                style={inputStyle}
+                onFocus={onFocus}
+                onBlur={onBlur}
+              />
+              <button
+                type="button"
+                onClick={addSpecification}
+                className="px-4 py-2 text-xs font-bold uppercase rounded-[2px] transition-colors"
+                style={{ background: 'var(--kivi-cyan)', color: '#002040' }}
+              >
+                Add Spec
+              </button>
+            </div>
+            <div
+              className="border rounded-[2px] overflow-hidden mt-3"
+              style={{ borderColor: 'var(--border-card)' }}
+            >
+              <table className="w-full text-xs text-left">
+                <thead>
+                  <tr
+                    className="font-display"
+                    style={{
+                      background: 'var(--bg-table-head)',
+                      borderBottom: '1px solid var(--border-divider)',
+                      color: 'var(--kivi-cyan)',
+                    }}
+                  >
+                    <th className="px-4 py-2">Parameter</th>
+                    <th className="px-4 py-2">Value</th>
+                    <th className="px-4 py-2 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(formData.specifications || {}).map(([key, val]) => (
+                    <tr
+                      key={key}
+                      className="border-b font-mono"
+                      style={{ borderColor: 'var(--border-table)' }}
+                    >
+                      <td className="px-4 py-2 font-bold" style={{ color: 'var(--text-primary)' }}>{key}</td>
+                      <td className="px-4 py-2" style={{ color: 'var(--text-secondary)' }}>{String(val)}</td>
+                      <td className="px-4 py-2 text-right">
+                        <button
+                          type="button"
+                          onClick={() => removeSpecification(key)}
+                          style={{ color: 'var(--kivi-error)' }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {Object.keys(formData.specifications || {}).length === 0 && (
+                    <tr>
+                      <td colSpan={3} className="px-4 py-4 text-center" style={{ color: 'var(--text-muted)' }}>
+                        No technical specifications added yet.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <Label>Safety &amp; Handling Information</Label>
+            <textarea
+              name="safety_info"
+              rows={3}
+              placeholder="Handling guidelines, hazards, storage recommendations..."
+              value={formData.safety_info}
+              onChange={handleChange}
+              onFocus={onFocus}
+              onBlur={onBlur}
+              disabled={loading}
+              className="w-full px-4 py-2.5 text-xs focus:outline-none transition-colors rounded-[2px] h-24"
+              style={inputStyle}
+            />
+          </div>
+
+          {/* ── SEO ── */}
+          <SectionHeading>SEO &amp; Search Meta Tags</SectionHeading>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <Label>SEO Title (max 60 characters)</Label>
+                <span
+                  className="text-[10px] font-mono"
+                  style={{ color: seoTitleCount > 60 ? 'var(--kivi-error)' : 'var(--text-muted)' }}
+                >
+                  {seoTitleCount}/60
+                </span>
+              </div>
+              <input
+                type="text"
+                name="seo_title"
+                value={formData.seo_title}
+                onChange={handleChange}
+                onFocus={onFocus}
+                onBlur={onBlur}
+                maxLength={60}
+                disabled={loading}
+                className={INPUT_CLS}
+                style={inputStyle}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Keywords (comma-separated list)</Label>
+              <input
+                type="text"
+                name="keywords"
+                placeholder="e.g. sodium hydroxide Kenya, buy caustic soda Nairobi"
+                value={formData.keywords}
+                onChange={handleChange}
+                onFocus={onFocus}
+                onBlur={onBlur}
+                disabled={loading}
+                className={INPUT_CLS}
+                style={inputStyle}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <Label>SEO Meta Description (max 160 characters)</Label>
+            <input
+              type="text"
+              name="seo_description"
+              value={formData.seo_description}
+              onChange={handleChange}
+              onFocus={onFocus}
+              onBlur={onBlur}
+              maxLength={160}
+              disabled={loading}
+              className={INPUT_CLS}
+              style={inputStyle}
+            />
+          </div>
+
+          {/* ── Toggles ── */}
+          <SectionHeading>Toggles &amp; Statuses</SectionHeading>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {[
+              { field: 'is_active', label: 'Active Catalog', sub: 'Visible to site visitors' },
+              { field: 'is_featured', label: 'Featured Product', sub: 'Show on home page grid' },
+              { field: 'in_stock', label: 'In Stock', sub: 'Available for ordering' },
+            ].map(({ field, label, sub }) => (
+              <label key={field} className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={Boolean(formData[field as keyof Product])}
+                  onChange={() => handleToggle(field as keyof Product)}
+                  disabled={loading}
+                  className="w-4 h-4 rounded-[2px]"
+                  style={{ accentColor: 'var(--kivi-cyan)' }}
+                />
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>{label}</span>
+                  <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>{sub}</span>
+                </div>
+              </label>
+            ))}
+
+            <label className="flex items-center gap-3 opacity-50">
+              <input
+                type="checkbox"
+                checked={formData.ai_generated}
+                disabled
+                className="w-4 h-4 rounded-[2px]"
+              />
+              <div className="flex flex-col">
+                <span className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>AI Generated</span>
+                <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>Populated by OpenAI LLM</span>
+              </div>
+            </label>
+          </div>
+
+          {/* ── Submit ── */}
+          <div
+            className="flex justify-end gap-4 pt-6 border-t"
+            style={{ borderColor: 'var(--border-divider)' }}
+          >
+            <button
+              type="submit"
+              disabled={loading}
+              className="inline-flex items-center gap-2 px-6 py-3 transition-colors text-xs font-bold uppercase tracking-wider rounded-[2px] disabled:opacity-60"
+              style={{ background: 'var(--kivi-cyan)', color: '#002040' }}
+            >
+              <Save size={14} />
+              {loading ? 'Saving...' : isEdit ? 'Save Changes' : 'Publish Product'}
+            </button>
+          </div>
+        </div>
+      ) : (
+        /* ── PREVIEW TAB ── */
+        <div
+          className="p-6 rounded-[4px] space-y-6"
+          style={{
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-card)',
+            boxShadow: 'var(--shadow-card)',
+            color: 'var(--text-primary)',
+          }}
+        >
+          {/* Header */}
+          <div className="border-b pb-4" style={{ borderColor: 'var(--border-divider)' }}>
+            <span
+              className="text-[9px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-[2px] inline-block mb-2"
+              style={{ background: 'var(--bg-card-alt)', border: '1px solid var(--border-divider)', color: 'var(--kivi-cyan)' }}
+            >
+              Catalog Page Live Preview
+            </span>
+            <h1 className="font-display font-black text-2xl uppercase tracking-wide">
+              {formData.name || 'Untitled Chemical'}
+            </h1>
+            <p className="text-xs font-mono mt-1" style={{ color: 'var(--kivi-cyan)' }}>
+              Formula: {formData.chemical_formula || '—'} | CAS: {formData.cas_number || '—'} | UN: {formData.un_number || '—'}
+            </p>
+          </div>
+
+          {/* Product Intro & image */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="md:col-span-1 border rounded p-4 flex items-center justify-center min-h-[220px]" style={{ borderColor: 'var(--border-card)', background: 'var(--bg-card-alt)' }}>
+              {imagePreview ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={imagePreview} alt={formData.name} className="max-h-48 object-contain" />
+              ) : (
+                <div className="text-center" style={{ color: 'var(--text-muted)' }}>
+                  <ImageIcon size={40} className="mx-auto mb-2 opacity-55" />
+                  <span className="text-xs">No image provided</span>
+                </div>
+              )}
+            </div>
+
+            <div className="md:col-span-2 space-y-4">
+              <div>
+                <h4 className="text-[10px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-muted)' }}>Short Description</h4>
+                <p className="text-xs leading-relaxed mt-1" style={{ color: 'var(--text-secondary)' }}>{formData.short_description || '—'}</p>
+              </div>
+
+              <div>
+                <h4 className="text-[10px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-muted)' }}>Introduction</h4>
+                <p className="text-xs leading-relaxed mt-1">{formData.introduction || '—'}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Technical properties */}
+          <div className="space-y-3">
+            <h3 className="font-display font-bold text-sm uppercase" style={{ color: 'var(--text-primary)' }}>Technical Specifications</h3>
+            <div className="border rounded overflow-hidden" style={{ borderColor: 'var(--border-card)' }}>
+              <table className="w-full text-xs text-left">
+                <thead>
+                  <tr style={{ background: 'var(--bg-table-head)', borderBottom: '1px solid var(--border-divider)' }}>
+                    <th className="px-4 py-2">Property / Parameter</th>
+                    <th className="px-4 py-2">Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b" style={{ borderColor: 'var(--border-table)' }}>
+                    <td className="px-4 py-2 font-bold">Grade</td>
+                    <td className="px-4 py-2">{formData.grade || '—'}</td>
+                  </tr>
+                  <tr className="border-b" style={{ borderColor: 'var(--border-table)' }}>
+                    <td className="px-4 py-2 font-bold">Purity</td>
+                    <td className="px-4 py-2">{formData.purity || '—'}</td>
+                  </tr>
+                  {Object.entries(formData.specifications || {}).map(([k, v]) => (
+                    <tr key={k} className="border-b" style={{ borderColor: 'var(--border-table)' }}>
+                      <td className="px-4 py-2 font-bold">{k}</td>
+                      <td className="px-4 py-2">{String(v)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Full description */}
+          <div className="space-y-2">
+            <h3 className="font-display font-bold text-sm uppercase" style={{ color: 'var(--text-primary)' }}>Detailed Overview</h3>
+            <div className="text-xs leading-relaxed space-y-3" style={{ color: 'var(--text-secondary)' }}>
+              {formData.description ? (
+                formData.description.split('\n\n').map((para, i) => <p key={i}>{para}</p>)
+              ) : (
+                <p>No full description provided.</p>
+              )}
+            </div>
+          </div>
+
+          {/* Applications list */}
+          {formData.applications && formData.applications.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="font-display font-bold text-sm uppercase" style={{ color: 'var(--text-primary)' }}>Industrial Applications</h3>
+              <div className="flex flex-wrap gap-2">
+                {formData.applications.map((app, i) => (
+                  <span
+                    key={i}
+                    className="px-3 py-1 rounded-[2px] text-xs border"
+                    style={{ background: 'var(--bg-card-alt)', borderColor: 'var(--border-card)', color: 'var(--text-primary)' }}
+                  >
+                    {app}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Safety info */}
+          {formData.safety_info && (
+            <div className="space-y-2">
+              <h3 className="font-display font-bold text-sm uppercase" style={{ color: 'var(--kivi-hazard)' }}>Safety &amp; Hazards</h3>
+              <div className="p-4 rounded-[2px] text-xs leading-relaxed" style={{ background: 'var(--kivi-hazard-bg)', border: '1px solid var(--kivi-hazard)', color: 'var(--text-primary)' }}>
+                {formData.safety_info}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </form>
   )
 }

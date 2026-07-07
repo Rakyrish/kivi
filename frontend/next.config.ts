@@ -5,6 +5,9 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'res.cloudinary.com' },
+      { protocol: 'https', hostname: '**.cloudinary.com' },
+      { protocol: 'http', hostname: 'localhost' },
+      { protocol: 'https', hostname: '**.amazonaws.com' },
     ],
     formats: ['image/avif', 'image/webp'],
   },

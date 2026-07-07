@@ -1,19 +1,26 @@
 import time
-from django.db import connection
-from django.db.models import Count, Sum
+from django.db import connection, models
+from django.db.models import Count, Sum, F
 from django.core.cache import cache
 from django.utils import timezone
 from datetime import timedelta
 from rest_framework import viewsets, permissions, status
+from rest_framework.decorators import action
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from apps.products.models import Product, Category, SiteSetting
 from apps.blog.models import BlogPost
 from apps.contacts.models import ContactSubmission
 from apps.leads.models import QuoteRequest, Lead
-from .models import PageView, ProductView, AIGenerationLog
-from .serializers import PageViewSerializer, ProductViewSerializer, AIGenerationLogSerializer
+from .models import PageView, ProductView, AIGenerationLog, SystemError, SearchQueryLog, PerformanceMetric, ChatMessage
+from .serializers import (
+    PageViewSerializer, ProductViewSerializer, AIGenerationLogSerializer,
+    SystemErrorSerializer, SearchQueryLogSerializer, PerformanceMetricSerializer
+)
+from .search_console import fetch_search_analytics
+from .tasks import run_pagespeed_audit
 import cloudinary
+import cloudinary.api
 
 
 class PageViewViewSet(viewsets.ModelViewSet):
@@ -99,6 +106,7 @@ class DashboardMetricsView(APIView):
             'leads': Lead.objects.count(),
             'quote_requests': QuoteRequest.objects.count(),
             'contacts': ContactSubmission.objects.count(),
+            'unresolved_errors': SystemError.objects.filter(status='unresolved').count(),
         }
 
         # 2. Activity Trends (Last 30 Days)
@@ -127,7 +135,6 @@ class DashboardMetricsView(APIView):
 
         # 6. Site Health Check
         health = {}
-        # DB Health
         try:
             with connection.cursor() as cursor:
                 cursor.execute("SELECT 1")
@@ -135,35 +142,64 @@ class DashboardMetricsView(APIView):
         except Exception:
             health['db'] = 'unhealthy'
 
-        # Redis Cache Health
         try:
             cache.set('ping', 'pong', 5)
             health['redis'] = 'healthy' if cache.get('ping') == 'pong' else 'unhealthy'
         except Exception:
             health['redis'] = 'unhealthy'
 
-        # Cloudinary Health
         try:
             cloudinary.api.ping()
             health['cloudinary'] = 'healthy'
         except Exception:
             health['cloudinary'] = 'unhealthy'
 
-        # 7. Google Search Console API report (stub/integrated)
-        gsc = {
-            'status': 'configured' if getattr(connection, 'gsc_configured', False) else 'stubbed',
-            'notes': 'Provide Google Service Account JSON to load live search console keywords.',
-            'clicks': 1240,
-            'impressions': 48500,
-            'average_position': 14.2,
-            'top_queries': [
-                {'query': 'industrial chemicals Kenya', 'clicks': 234, 'impressions': 1200},
-                {'query': 'water treatment chemicals Nairobi', 'clicks': 142, 'impressions': 890},
-                {'query': 'buy solvents East Africa', 'clicks': 98, 'impressions': 650},
-                {'query': 'purity grade Sodium Hydroxide', 'clicks': 87, 'impressions': 430},
-                {'query': 'Kivi chemicals', 'clicks': 65, 'impressions': 310},
-            ]
-        }
+        # 7. Search analytics — live Google Search Console when configured,
+        # otherwise the site's own internal search logs. Never fabricated.
+        gsc_data = fetch_search_analytics()
+        if gsc_data:
+            search_analytics = {**gsc_data, 'source': 'search_console'}
+        else:
+            top_searches = SearchQueryLog.objects.values('query').annotate(
+                searches=Count('id'),
+                avg_results=Sum('results_count') / Count('id')
+            ).order_by('-searches')[:10]
+            search_analytics = {
+                'clicks': sum(s['searches'] for s in top_searches),
+                'impressions': None,
+                'ctr': None,
+                'average_position': None,
+                'top_queries': [
+                    {
+                        'query': s['query'],
+                        'clicks': s['searches'],
+                        'impressions': None,
+                        'results_count': int(s['avg_results'] or 0),
+                    } for s in top_searches
+                ],
+                'source': 'internal_search',
+            }
+
+        # 8. Performance Metrics (real Lighthouse audits via PageSpeed Insights).
+        # None until the first audit runs — the dashboard offers a manual trigger.
+        perf_metric = PerformanceMetric.objects.first()
+        performance_data = None
+        if perf_metric:
+            performance_data = {
+                'performance_score': perf_metric.performance_score,
+                'seo_score': perf_metric.seo_score,
+                'accessibility_score': perf_metric.accessibility_score,
+                'best_practices_score': perf_metric.best_practices_score,
+                'lcp': perf_metric.lcp,
+                'cls': perf_metric.cls,
+                'inp': perf_metric.inp,
+                'fcp': perf_metric.fcp,
+                'ttfb': perf_metric.ttfb,
+                'url': perf_metric.url,
+                'strategy': perf_metric.strategy,
+                'recommendations': perf_metric.recommendations,
+                'audited_at': perf_metric.created_at,
+            }
 
         return Response({
             'counts': counts,
@@ -181,39 +217,55 @@ class DashboardMetricsView(APIView):
                 'countries': list(countries),
             },
             'ai_stats': ai_stats,
+            'chatbot': self._get_chatbot_stats(thirty_days_ago),
             'health': health,
-            'google_search_console': gsc,
+            'google_search_console': search_analytics,
+            'lighthouse': performance_data,
             'inventory': self._get_inventory_stats(),
             'security': self._get_security_stats(),
         })
 
+    def _get_chatbot_stats(self, since):
+        """Kivi Agent usage stats for the dashboard, from real chat logs."""
+        recent = ChatMessage.objects.filter(created_at__gte=since)
+        return {
+            'total_messages': ChatMessage.objects.count(),
+            'messages_30d': recent.count(),
+            'sessions_30d': recent.values('session_id').distinct().count(),
+            'escalations_30d': recent.filter(escalated=True).count(),
+            'tokens_30d': recent.aggregate(total=Sum('tokens_used'))['total'] or 0,
+        }
+
     def _get_inventory_stats(self):
-        """Real inventory stats calculated from DB product flags."""
-        from apps.products.models import Product
+        """Real inventory stats calculated from DB product stock."""
         total = Product.objects.filter(is_active=True).count()
-        in_stock = Product.objects.filter(is_active=True, in_stock=True).count()
-        out_of_stock = Product.objects.filter(is_active=True, in_stock=False).count()
+        in_stock = Product.objects.filter(is_active=True, product_status='in_stock').count()
+        low_stock = Product.objects.filter(is_active=True, product_status='low_stock').count()
+        out_of_stock = Product.objects.filter(is_active=True, product_status='out_of_stock').count()
+        discontinued = Product.objects.filter(is_active=True, product_status='discontinued').count()
         featured = Product.objects.filter(is_active=True, is_featured=True).count()
-        # "Low stock" = products with quote_request_count > 5 and in_stock True (high demand)
-        high_demand = Product.objects.filter(is_active=True, in_stock=True, quote_request_count__gt=5).count()
+        
+        # Calculate total asset valuation
+        total_valuation = Product.objects.filter(is_active=True).aggregate(
+            total_val=Sum(F('current_stock') * F('product_cost'), output_field=models.DecimalField())
+        )['total_val'] or 0.00
+        
         return {
             'total_active': total,
             'in_stock': in_stock,
+            'low_stock': low_stock,
             'out_of_stock': out_of_stock,
+            'discontinued': discontinued,
             'featured': featured,
-            'high_demand': high_demand,
-            'stock_rate': round((in_stock / total * 100) if total > 0 else 100, 1),
+            'stock_rate': round(((in_stock + low_stock) / total * 100) if total > 0 else 100, 1),
+            'total_valuation': float(total_valuation)
         }
 
     def _get_security_stats(self):
         """Security monitoring — using available auth token and failed login data."""
         from django.contrib.auth.models import User
-        from django.utils import timezone
-        from datetime import timedelta
         now = timezone.now()
         seven_days_ago = now - timedelta(days=7)
-        thirty_days_ago = now - timedelta(days=30)
-        # Admin users created recently (approximate new account activity)
         recent_users = User.objects.filter(date_joined__gte=seven_days_ago).count()
         active_admins = User.objects.filter(is_staff=True, is_active=True).count()
         return {
@@ -222,4 +274,44 @@ class DashboardMetricsView(APIView):
             'failed_login_note': 'Enable django-axes for detailed failed login monitoring.',
             'rate_limit_note': 'DRF throttle: 60req/min anon, 200req/min authenticated.',
         }
+
+
+class SystemErrorViewSet(viewsets.ModelViewSet):
+    queryset = SystemError.objects.all()
+    serializer_class = SystemErrorSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+    @action(detail=True, methods=['post'], url_path='resolve')
+    def resolve(self, request, pk=None):
+        error = self.get_object()
+        error.status = 'resolved'
+        error.save()
+        return Response({'status': 'resolved', 'message': f'Error {pk} marked as resolved'})
+
+    @action(detail=False, methods=['post'], url_path='resolve-all')
+    def resolve_all(self, request):
+        SystemError.objects.filter(status='unresolved').update(status='resolved')
+        return Response({'status': 'resolved', 'message': 'All unresolved errors marked as resolved'})
+
+
+class PerformanceMetricViewSet(viewsets.ModelViewSet):
+    queryset = PerformanceMetric.objects.all()
+    serializer_class = PerformanceMetricSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+    @action(detail=False, methods=['post'], url_path='run-audit')
+    def run_audit(self, request):
+        """Queue a real Lighthouse audit via PageSpeed Insights (sync fallback if broker is down)."""
+        strategy = request.data.get('strategy', 'mobile')
+        if strategy not in ('mobile', 'desktop'):
+            return Response({'error': "strategy must be 'mobile' or 'desktop'"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            run_pagespeed_audit.delay(strategy=strategy)
+            return Response({'status': 'queued', 'strategy': strategy})
+        except Exception:
+            result = run_pagespeed_audit(strategy=strategy)
+            if result.get('status') == 'success':
+                return Response({'status': 'completed', **result})
+            return Response(result, status=status.HTTP_502_BAD_GATEWAY)
 

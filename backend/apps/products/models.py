@@ -35,6 +35,7 @@ class Category(models.Model):
         help_text='[{"question": "...", "answer": "..."}, ...]'
     )
 
+    is_featured = models.BooleanField(default=False)
     order = models.IntegerField(default=0)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -64,7 +65,7 @@ class Product(models.Model):
     # ── Chemical Properties ──
     chemical_formula = models.CharField(max_length=100, blank=True)   # e.g. NaOH
     cas_number = models.CharField(max_length=20, blank=True)           # e.g. 1310-73-2
-    un_number = models.CharField(max_length=20, blank=True)            # Hazmat UN number
+    un_number = models.CharField(max_length=30, blank=True)            # Hazmat UN number
     purity = models.CharField(max_length=50, blank=True)               # e.g. "99.0% min"
     molecular_weight = models.CharField(max_length=30, blank=True)     # e.g. "40.00 g/mol"
     appearance = models.CharField(max_length=150, blank=True)          # e.g. "White crystalline powder"
@@ -78,8 +79,28 @@ class Product(models.Model):
 
     # ── Content ──
     short_description = models.CharField(max_length=300, blank=True)
-    description = models.TextField(blank=True)
+    introduction = models.TextField(
+        blank=True,
+        help_text="Product introduction (150-300 words): what it is, why it's used, industries, commercial importance."
+    )
+    description = models.TextField(blank=True)        # Detailed overview (300-500 words)
     applications = models.JSONField(default=list)     # ["Water treatment", "Soap making"]
+    applications_detailed = models.JSONField(
+        default=list, blank=True,
+        help_text='Each use case explained individually: [{"title": "Water Treatment", "description": "..."}]'
+    )
+    benefits_content = models.TextField(
+        blank=True,
+        help_text="Benefits and advantages in flowing paragraphs (cost, performance, operational, industry)."
+    )
+    packaging_info = models.TextField(
+        blank=True,
+        help_text="Prose explanation of packaging options, bulk supply, and commercial formats."
+    )
+    storage_handling = models.TextField(
+        blank=True,
+        help_text="Detailed storage conditions and handling guidance."
+    )
     specifications = models.JSONField(default=dict)   # {"Purity": "99%", "Form": "Powder"}
     safety_info = models.TextField(blank=True)        # Handling, storage, hazard info
 
@@ -132,6 +153,24 @@ class Product(models.Model):
     is_featured = models.BooleanField(default=False)
     in_stock = models.BooleanField(default=True)
 
+    # ── Inventory ──
+    current_stock = models.IntegerField(default=100)
+    reserved_stock = models.IntegerField(default=0)
+    reorder_level = models.IntegerField(default=10)
+    supplier = models.CharField(max_length=200, blank=True)
+    batch_number = models.CharField(max_length=100, blank=True)
+    product_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
+    product_status = models.CharField(
+        max_length=30,
+        choices=[
+            ('in_stock', 'In Stock'),
+            ('low_stock', 'Low Stock'),
+            ('out_of_stock', 'Out of Stock'),
+            ('discontinued', 'Discontinued')
+        ],
+        default='in_stock'
+    )
+
     # ── Analytics ──
     view_count = models.PositiveIntegerField(default=0)
     quote_request_count = models.PositiveIntegerField(default=0)
@@ -145,6 +184,21 @@ class Product(models.Model):
     def save(self, *args, **kwargs):
         if not self.slug:
             self.slug = slugify(self.name)
+        
+        # Update product status based on stock level if not discontinued
+        if self.product_status != 'discontinued':
+            if self.current_stock <= 0:
+                self.product_status = 'out_of_stock'
+                self.in_stock = False
+            elif self.current_stock <= self.reorder_level:
+                self.product_status = 'low_stock'
+                self.in_stock = True
+            else:
+                self.product_status = 'in_stock'
+                self.in_stock = True
+        else:
+            self.in_stock = False
+            
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -225,4 +279,58 @@ class SavedProduct(models.Model):
 
     def __str__(self):
         return f"{self.user.username} saved {self.product.name}"
+
+
+class TechnicalDataSheet(models.Model):
+    product = models.OneToOneField(Product, on_delete=models.CASCADE, related_name='tds')
+    chemical_formula = models.CharField(max_length=100, blank=True)
+    product_description = models.TextField(blank=True)
+    
+    # JSON parameters
+    technical_specifications = models.JSONField(default=dict, blank=True)
+    physical_properties = models.JSONField(default=dict, blank=True)
+    chemical_properties = models.JSONField(default=dict, blank=True)
+    industrial_applications = models.JSONField(default=list, blank=True)
+    
+    purity = models.CharField(max_length=50, blank=True)
+    appearance = models.CharField(max_length=150, blank=True)
+    solubility = models.CharField(max_length=150, blank=True)
+    density = models.CharField(max_length=50, blank=True)
+    ph = models.CharField(max_length=20, blank=True)
+    
+    packaging = models.TextField(blank=True)
+    storage_conditions = models.TextField(blank=True)
+    shelf_life = models.CharField(max_length=100, blank=True)
+    safety_notes = models.TextField(blank=True)
+    handling_recommendations = models.TextField(blank=True)
+    
+    is_published = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"TDS for {self.product.name}"
+
+
+class StockMovementLog(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='stock_movements')
+    movement_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('in', 'Stock In'),
+            ('out', 'Stock Out'),
+            ('reserve', 'Stock Reserve'),
+            ('release', 'Stock Release')
+        ]
+    )
+    quantity = models.IntegerField()
+    reference = models.CharField(max_length=200, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.product.name} - {self.movement_type} {self.quantity} ({self.created_at.strftime('%Y-%m-%d')})"
 
