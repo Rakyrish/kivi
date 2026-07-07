@@ -107,6 +107,17 @@ services:
       redis:
         condition: service_started
 
+  db-proxy:
+    image: alpine/socat
+    restart: unless-stopped
+    ports:
+      - "${DB_PORT:-5433}:5432"
+    command: tcp-listen:5432,fork,reuseaddr tcp-connect:db:5432
+    depends_on:
+      - db
+
+
+
 volumes:
   kivi_pgdata:
   static_files:

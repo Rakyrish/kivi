@@ -164,6 +164,59 @@ class ProductViewSet(viewsets.ModelViewSet):
                 return Response(serializer.data)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @action(detail=True, methods=['post'], url_path='regenerate')
+    def regenerate(self, request, slug=None):
+        """Regenerate one product's content in place (URL preserved). Sync fallback if broker is down."""
+        from .tasks import regenerate_product_content_task, regenerate_product_content
+        product = self.get_object()
+        try:
+            regenerate_product_content_task.delay(product.id)
+            return Response({'status': 'queued', 'slug': product.slug})
+        except Exception:
+            try:
+                result = regenerate_product_content(product.id)
+                return Response({'status': 'completed', 'slug': product.slug, 'detail': result})
+            except Exception as e:
+                return Response({'error': str(e)}, status=status.HTTP_502_BAD_GATEWAY)
+
+    @action(detail=False, methods=['post'], url_path='regenerate-bulk')
+    def regenerate_bulk(self, request):
+        """
+        Queue content regeneration for selected products ({"slugs": [...]}) or the
+        whole catalogue ({"all": true}). Tasks are staggered to respect OpenAI limits.
+        """
+        from .tasks import regenerate_product_content_task
+
+        if request.data.get('all'):
+            queryset = Product.objects.all()
+        else:
+            slugs = request.data.get('slugs') or []
+            if not isinstance(slugs, list) or not slugs:
+                return Response(
+                    {'error': "Provide {'slugs': [...]} or {'all': true}."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            queryset = Product.objects.filter(slug__in=slugs)
+
+        ids = list(queryset.values_list('id', flat=True))
+        if not ids:
+            return Response({'error': 'No matching products found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            for i, product_id in enumerate(ids):
+                regenerate_product_content_task.apply_async(args=[product_id], countdown=i * 8)
+        except Exception as e:
+            return Response(
+                {'error': f'Task queue unavailable — start the Celery worker and retry. ({e})'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+
+        return Response({
+            'status': 'queued',
+            'count': len(ids),
+            'estimated_minutes': round(len(ids) * 8 / 60, 1),
+        })
+
     @action(detail=True, methods=['post'], url_path='update-stock')
     def update_stock(self, request, slug=None):
         product = self.get_object()

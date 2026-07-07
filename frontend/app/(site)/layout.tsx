@@ -1,5 +1,6 @@
 import Navbar from '@/components/site/Navbar'
 import Footer from '@/components/site/Footer'
+import FloatingContactCenter from '@/components/site/FloatingContactCenter'
 
 export default function SiteLayout({
   children,
@@ -13,6 +14,7 @@ export default function SiteLayout({
         {children}
       </main>
       <Footer />
+      <FloatingContactCenter />
     </>
   )
 }

@@ -6,7 +6,7 @@ export default function Footer() {
   const currentYear = new Date().getFullYear()
 
   return (
-    <footer className="site-footer bg-[#081525] border-t border-[#00A0C0]/15 text-[#94A3B8] pt-16 pb-8">
+    <footer className="bg-[#040f1c] border-t border-[#00A0C0]/15 text-[#94A3B8] pt-16 pb-8" style={{ backgroundColor: '#040f1c', color: '#94A3B8' }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
           {/* Company Brief */}

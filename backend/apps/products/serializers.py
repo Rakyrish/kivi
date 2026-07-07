@@ -25,6 +25,12 @@ class ProductSerializer(serializers.ModelSerializer):
         model = Product
         fields = '__all__'
 
+    def update(self, instance, validated_data):
+        # URL preservation: a product's slug is permanent once created.
+        # Content regeneration and admin edits must never move the page.
+        validated_data.pop('slug', None)
+        return super().update(instance, validated_data)
+
 
 class SiteSettingSerializer(serializers.ModelSerializer):
     class Meta:

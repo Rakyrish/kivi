@@ -115,7 +115,7 @@ html[data-theme='light'] {
   --bg-input:           #FFFFFF;
   --bg-nav:             rgba(255,255,255,0.96);
   --bg-dropdown:        #FFFFFF;
-  --bg-footer:          #EEF4FA;
+  --bg-footer:          #040f1c;
   --bg-admin:           #F0F4F8;
   --bg-admin-card:      #FFFFFF;
   --bg-table-head:      rgba(0,32,64,0.04);
@@ -163,6 +163,24 @@ html[data-theme='light'] {
   --shadow-card-hover:  0 8px 24px rgba(0,32,64,0.12), 0 2px 8px rgba(0,160,192,0.08);
   --shadow-dropdown:    0 16px 48px rgba(0,32,64,0.16);
   --shadow-glow-cyan:   0 0 20px rgba(0,160,192,0.12);
+}
+
+/* ── Theme-invariant tokens ──────────────────────────────────
+   A few surfaces (the product datasheet cards, the specs panel)
+   are deliberately pinned to one look in both themes rather than
+   flipping with data-theme. Text sitting on them must be pinned
+   too, or it inherits a color meant for the opposite surface and
+   becomes low/zero contrast. ── */
+:root {
+  --paper-text:   #1E293B; /* body copy on always-white cards */
+  --paper-muted:  #64748B; /* secondary/label text on always-white cards */
+  --panel-text:   #F4F7FA; /* body copy on the always-dark specs panel */
+  --panel-muted:  #94A3B8; /* secondary/label text on the always-dark specs panel */
+  /* Tailwind can't derive a /60-opacity variant from a var()-wrapped
+     arbitrary color (no channel to decompose), so the dimmed tone is
+     pre-mixed here instead of relying on a `text-[var(--panel-muted)]/60`
+     utility, which silently fails to generate and falls back to inherit. */
+  --panel-muted-dim: rgba(148, 163, 184, 0.6);
 }
 
 /* ── Base Reset ────────────────────────────────────────────── */
@@ -291,14 +309,14 @@ nav, footer, aside, main,
   border-color: var(--border-input);
 }
 
-/* ── Footer ── */
+/* ── Footer — always dark regardless of theme ── */
 .site-footer {
-  background-color: var(--bg-footer);
-  border-top: 1px solid var(--border-divider);
-  color: var(--text-secondary);
+  background-color: #040f1c !important;
+  border-top: 1px solid rgba(0,160,192,0.15);
+  color: #94A3B8;
 }
 .footer-heading {
-  color: var(--text-heading);
+  color: #F4F7FA;
 }
 
 /* ── Cards ── */
@@ -348,7 +366,8 @@ select.theme-input option {
   font-family: var(--font-jetbrains-mono), monospace;
   padding: 0.625rem 0.75rem;
   border-bottom: 1px solid var(--border-table);
-  color: var(--text-primary);
+  /* text color is set per-cell by the component (it sits on a
+     theme-invariant dark panel, not a theme-reactive surface) */
 }
 .specs-table tr:nth-child(even) td {
   background-color: var(--bg-table-row-alt);

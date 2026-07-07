@@ -65,7 +65,7 @@ class Product(models.Model):
     # ── Chemical Properties ──
     chemical_formula = models.CharField(max_length=100, blank=True)   # e.g. NaOH
     cas_number = models.CharField(max_length=20, blank=True)           # e.g. 1310-73-2
-    un_number = models.CharField(max_length=10, blank=True)            # Hazmat UN number
+    un_number = models.CharField(max_length=30, blank=True)            # Hazmat UN number
     purity = models.CharField(max_length=50, blank=True)               # e.g. "99.0% min"
     molecular_weight = models.CharField(max_length=30, blank=True)     # e.g. "40.00 g/mol"
     appearance = models.CharField(max_length=150, blank=True)          # e.g. "White crystalline powder"
@@ -79,8 +79,28 @@ class Product(models.Model):
 
     # ── Content ──
     short_description = models.CharField(max_length=300, blank=True)
-    description = models.TextField(blank=True)
+    introduction = models.TextField(
+        blank=True,
+        help_text="Product introduction (150-300 words): what it is, why it's used, industries, commercial importance."
+    )
+    description = models.TextField(blank=True)        # Detailed overview (300-500 words)
     applications = models.JSONField(default=list)     # ["Water treatment", "Soap making"]
+    applications_detailed = models.JSONField(
+        default=list, blank=True,
+        help_text='Each use case explained individually: [{"title": "Water Treatment", "description": "..."}]'
+    )
+    benefits_content = models.TextField(
+        blank=True,
+        help_text="Benefits and advantages in flowing paragraphs (cost, performance, operational, industry)."
+    )
+    packaging_info = models.TextField(
+        blank=True,
+        help_text="Prose explanation of packaging options, bulk supply, and commercial formats."
+    )
+    storage_handling = models.TextField(
+        blank=True,
+        help_text="Detailed storage conditions and handling guidance."
+    )
     specifications = models.JSONField(default=dict)   # {"Purity": "99%", "Form": "Powder"}
     safety_info = models.TextField(blank=True)        # Handling, storage, hazard info
 
@@ -134,7 +154,7 @@ class Product(models.Model):
     in_stock = models.BooleanField(default=True)
 
     # ── Inventory ──
-    current_stock = models.IntegerField(default=0)
+    current_stock = models.IntegerField(default=100)
     reserved_stock = models.IntegerField(default=0)
     reorder_level = models.IntegerField(default=10)
     supplier = models.CharField(max_length=200, blank=True)

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import PageView, ProductView, AIGenerationLog, SystemError, SearchQueryLog, PerformanceMetric
+from .models import PageView, ProductView, AIGenerationLog, SystemError, SearchQueryLog, PerformanceMetric, ChatMessage
 
 
 @admin.register(PageView)
@@ -43,4 +43,12 @@ class SearchQueryLogAdmin(admin.ModelAdmin):
 @admin.register(PerformanceMetric)
 class PerformanceMetricAdmin(admin.ModelAdmin):
     list_display = ('created_at', 'performance_score', 'seo_score', 'accessibility_score', 'best_practices_score')
+    readonly_fields = ('created_at',)
+
+
+@admin.register(ChatMessage)
+class ChatMessageAdmin(admin.ModelAdmin):
+    list_display = ('session_id', 'role', 'content', 'escalated', 'tokens_used', 'created_at')
+    list_filter = ('role', 'escalated', 'created_at')
+    search_fields = ('content', 'session_id')
     readonly_fields = ('created_at',)
