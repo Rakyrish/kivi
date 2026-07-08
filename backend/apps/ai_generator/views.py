@@ -1,8 +1,10 @@
 import json
 import base64
+import uuid
 import openai
 import cloudinary.uploader
 from django.conf import settings
+from django.utils.text import slugify
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser, AllowAny
@@ -16,10 +18,12 @@ from .analyze_vision import analyze_product_image_vision
 def _upload_files_to_cloudinary(uploaded_files):
     """
     Upload a list of InMemoryUploadedFile objects to Cloudinary.
-    Returns (cloudinary_urls, fallback_b64_list) — if Cloudinary upload fails
-    for a file we fall back to raw base64 so Vision can still analyse it.
+    Returns (cloudinary_urls, cloudinary_public_ids, fallback_b64_list) — if
+    Cloudinary upload fails for a file we fall back to raw base64 so Vision
+    can still analyse it.
     """
     cloudinary_urls = []
+    cloudinary_public_ids = []
     fallback_b64 = []
     for img in uploaded_files:
         try:
@@ -32,6 +36,7 @@ def _upload_files_to_cloudinary(uploaded_files):
             url = result.get("secure_url", "")
             if url:
                 cloudinary_urls.append(url)
+                cloudinary_public_ids.append(result.get("public_id", ""))
                 continue
         except Exception:
             pass
@@ -41,7 +46,36 @@ def _upload_files_to_cloudinary(uploaded_files):
             fallback_b64.append(base64.b64encode(img.read()).decode("utf-8"))
         except Exception:
             pass
-    return cloudinary_urls, fallback_b64
+    return cloudinary_urls, cloudinary_public_ids, fallback_b64
+
+
+def _slugify_cloudinary_images(public_ids, urls, product_name):
+    """
+    Renames freshly-uploaded Cloudinary image assets from their random default
+    public_id to a URL-friendly slug derived from the product name (e.g.
+    products/sodium-hydroxide-1), mirroring the naming already used for
+    datasheet PDFs. Always runs — falls back to a generic 'product' base when
+    no name is available yet — so uploaded product images never keep
+    Cloudinary's random id. Returns the (possibly updated) list of URLs.
+    """
+    if not public_ids:
+        return urls
+    base_slug = slugify(product_name) or 'product'
+    updated_urls = list(urls)
+    multiple = len(public_ids) > 1
+    for i, old_public_id in enumerate(public_ids):
+        if not old_public_id:
+            continue
+        suffix = uuid.uuid4().hex[:6]
+        new_public_id = f"products/{base_slug}-{i + 1}-{suffix}" if multiple else f"products/{base_slug}-{suffix}"
+        try:
+            result = cloudinary.uploader.rename(old_public_id, new_public_id, overwrite=True, invalidate=True)
+            new_url = result.get('secure_url')
+            if new_url and i < len(updated_urls):
+                updated_urls[i] = new_url
+        except Exception:
+            pass
+    return updated_urls
 
 
 def _get_data_list(data, key):
@@ -101,7 +135,7 @@ class AnalyzeProductImageView(APIView):
                 uploaded_images = [single_image]
 
         # Upload files to Cloudinary; fall back to base64 if Cloudinary is unavailable
-        cloudinary_urls, image_b64_list = _upload_files_to_cloudinary(uploaded_images)
+        cloudinary_urls, cloudinary_public_ids, image_b64_list = _upload_files_to_cloudinary(uploaded_images)
 
         # Merge Cloudinary-hosted URLs with any externally pasted URLs
         all_image_urls = cloudinary_urls + image_urls
@@ -111,6 +145,13 @@ class AnalyzeProductImageView(APIView):
                 image_b64_list=image_b64_list or None,
                 image_url_list=all_image_urls or None,
             )
+            # Rename the freshly-uploaded assets to a slug derived from the
+            # (now known) product name instead of Cloudinary's random id.
+            if cloudinary_public_ids:
+                cloudinary_urls = _slugify_cloudinary_images(
+                    cloudinary_public_ids, cloudinary_urls, extraction.get('product_name', '')
+                )
+                all_image_urls = cloudinary_urls + image_urls
             # Attach the Cloudinary-hosted URLs to the extraction so the
             # frontend can bind them straight into the product form.
             if not extraction.get('image'):
@@ -176,8 +217,17 @@ class GenerateProductContentView(APIView):
                 uploaded_images = [single_image]
 
         # Upload files to Cloudinary; fall back to base64 for Vision if needed
-        cloudinary_urls, image_b64_list = _upload_files_to_cloudinary(uploaded_images)
+        cloudinary_urls, cloudinary_public_ids, image_b64_list = _upload_files_to_cloudinary(uploaded_images)
         all_image_urls = cloudinary_urls + image_urls
+
+        # A product name may already be known (typed by the admin) — slug the
+        # freshly-uploaded images right away instead of leaving Cloudinary's
+        # random id in place.
+        known_name = product_name or (vision_data.get('product_name') if vision_data else '')
+        if cloudinary_public_ids and known_name:
+            cloudinary_urls = _slugify_cloudinary_images(cloudinary_public_ids, cloudinary_urls, known_name)
+            all_image_urls = cloudinary_urls + image_urls
+            cloudinary_public_ids = []  # already renamed, don't redo below
 
         # If vision_data already contains image URLs (from Stage 1), honour them
         if vision_data and not vision_data.get('image') and all_image_urls:
@@ -192,6 +242,13 @@ class GenerateProductContentView(APIView):
                     image_b64_list=image_b64_list or None,
                     image_url_list=all_image_urls or None,
                 )
+                # Rename to a slug now that the product name is known, if not
+                # already done above.
+                if cloudinary_public_ids:
+                    cloudinary_urls = _slugify_cloudinary_images(
+                        cloudinary_public_ids, cloudinary_urls, vision_data.get('product_name', '')
+                    )
+                    all_image_urls = cloudinary_urls + image_urls
                 # Attach Cloudinary URLs to freshly-extracted vision data
                 if not vision_data.get('image') and all_image_urls:
                     vision_data['image'] = all_image_urls[0]
@@ -209,6 +266,18 @@ class GenerateProductContentView(APIView):
                 {'error': 'Image analysis failed. Unable to generate accurate product information.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+        # Safety net: any upload not yet renamed above (e.g. vision_data was
+        # supplied alongside freshly-uploaded files) still gets a slug.
+        if cloudinary_public_ids:
+            cloudinary_urls = _slugify_cloudinary_images(
+                cloudinary_public_ids, cloudinary_urls,
+                product_name or (vision_data.get('product_name') if vision_data else '')
+            )
+            all_image_urls = cloudinary_urls + image_urls
+            if vision_data and all_image_urls:
+                vision_data['image'] = all_image_urls[0]
+                vision_data['images'] = all_image_urls
 
         target_label = product_name or (vision_data.get('product_name') if vision_data else None) or "Unknown"
         action_type = "product_image" if vision_data else "product_text"
