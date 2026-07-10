@@ -1,4 +1,5 @@
 import { SITE } from './constants'
+import { hasRealValue } from './productDisplay'
 
 // Single shared brand image that actually exists in /public
 const BRAND_IMAGE = `${SITE.url}/kivi.jpeg`
@@ -88,6 +89,7 @@ export function productSchema(product: {
   chemical_formula?: string
   cas_number?: string
   category_name?: string
+  manufacturer?: string
 }) {
   return {
     '@context': 'https://schema.org',
@@ -123,6 +125,12 @@ export function productSchema(product: {
         '@type': 'PropertyValue',
         name: 'Chemical Formula',
         value: product.chemical_formula,
+      },
+    }),
+    ...(hasRealValue(product.manufacturer) && {
+      manufacturer: {
+        '@type': 'Organization',
+        name: product.manufacturer,
       },
     }),
   }

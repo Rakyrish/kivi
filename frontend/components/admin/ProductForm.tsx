@@ -31,6 +31,11 @@ export default function ProductForm({ initialData, categories, isEdit, aiData }:
     cas_number: '',
     grade: '',
     un_number: '',
+    brand: '',
+    manufacturer: '',
+    hazard_classification: '',
+    grades_available: [],
+    regulatory_compliance: [],
     short_description: '',
     description: '',
     applications: [],
@@ -50,6 +55,9 @@ export default function ProductForm({ initialData, categories, isEdit, aiData }:
   const [newApplication, setNewApplication] = useState('')
   const [specKey, setSpecKey] = useState('')
   const [specVal, setSpecVal] = useState('')
+  const [newCompliance, setNewCompliance] = useState('')
+  const [gradeKey, setGradeKey] = useState('')
+  const [gradeNote, setGradeNote] = useState('')
 
   const [loading, setLoading] = useState(false)
   const [regenLoading, setRegenLoading] = useState(false)
@@ -177,6 +185,43 @@ export default function ProductForm({ initialData, categories, isEdit, aiData }:
     })
   }
 
+  // Regulatory compliance tags logic
+  const addCompliance = () => {
+    if (newCompliance.trim() && !formData.regulatory_compliance?.includes(newCompliance.trim())) {
+      setFormData((prev) => ({
+        ...prev,
+        regulatory_compliance: [...(prev.regulatory_compliance || []), newCompliance.trim()],
+      }))
+      setNewCompliance('')
+    }
+  }
+
+  const removeCompliance = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      regulatory_compliance: prev.regulatory_compliance?.filter((_, i) => i !== index) || [],
+    }))
+  }
+
+  // Grades available logic
+  const addGradeAvailable = () => {
+    if (gradeKey.trim()) {
+      setFormData((prev) => ({
+        ...prev,
+        grades_available: [...(prev.grades_available || []), { grade: gradeKey.trim(), note: gradeNote.trim() }],
+      }))
+      setGradeKey('')
+      setGradeNote('')
+    }
+  }
+
+  const removeGradeAvailable = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      grades_available: prev.grades_available?.filter((_, i) => i !== index) || [],
+    }))
+  }
+
   // Content regeneration trigger
   const handleRegenerate = async () => {
     if (!formData.name && !formData.image) {
@@ -248,6 +293,11 @@ export default function ProductForm({ initialData, categories, isEdit, aiData }:
           cas_number: '',
           grade: '',
           un_number: '',
+          brand: '',
+          manufacturer: '',
+          hazard_classification: '',
+          grades_available: [],
+          regulatory_compliance: [],
           short_description: '',
           description: '',
           applications: [],
@@ -661,6 +711,161 @@ export default function ProductForm({ initialData, categories, isEdit, aiData }:
                 className={`${INPUT_CLS} font-mono`}
                 style={getFieldInputStyle('un_number')}
               />
+            </div>
+          </div>
+
+          {/* Row 4: Brand + Manufacturer + Hazard Classification */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="space-y-1">
+              <div className="flex items-center">
+                <Label>Brand</Label>
+                <ConfidenceBadge field="brand" />
+              </div>
+              <input
+                type="text"
+                name="brand"
+                placeholder="Brand shown on original packaging"
+                value={formData.brand || ''}
+                onChange={handleChange}
+                onFocus={onFocus}
+                onBlur={onBlur}
+                disabled={loading}
+                className={INPUT_CLS}
+                style={getFieldInputStyle('brand')}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex items-center">
+                <Label>Manufacturer</Label>
+                <ConfidenceBadge field="manufacturer" />
+              </div>
+              <input
+                type="text"
+                name="manufacturer"
+                placeholder="e.g. Original manufacturer name"
+                value={formData.manufacturer || ''}
+                onChange={handleChange}
+                onFocus={onFocus}
+                onBlur={onBlur}
+                disabled={loading}
+                className={INPUT_CLS}
+                style={getFieldInputStyle('manufacturer')}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex items-center">
+                <Label>Hazard Classification</Label>
+                <ConfidenceBadge field="hazard_classification" />
+              </div>
+              <input
+                type="text"
+                name="hazard_classification"
+                placeholder="e.g. GHS Category 1B – Corrosive (H314)"
+                value={formData.hazard_classification || ''}
+                onChange={handleChange}
+                onFocus={onFocus}
+                onBlur={onBlur}
+                disabled={loading}
+                className={INPUT_CLS}
+                style={getFieldInputStyle('hazard_classification')}
+              />
+            </div>
+          </div>
+
+          {/* Grades Available */}
+          <div className="space-y-2">
+            <div className="flex items-center">
+              <Label>Grades Available</Label>
+              <ConfidenceBadge field="grades_available" />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {(formData.grades_available || []).map((g, i) => (
+                <span
+                  key={i}
+                  title={g.note}
+                  className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-[2px]"
+                  style={{ background: 'var(--bg-card-alt)', border: '1px solid var(--border-card)', color: 'var(--text-primary)' }}
+                >
+                  {g.grade}
+                  <button type="button" onClick={() => removeGradeAvailable(i)} disabled={loading}>
+                    <Trash2 size={11} style={{ color: 'var(--kivi-error)' }} />
+                  </button>
+                </span>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Grade e.g. Food Grade"
+                value={gradeKey}
+                onChange={(e) => setGradeKey(e.target.value)}
+                disabled={loading}
+                className={INPUT_CLS}
+                style={inputStyle}
+              />
+              <input
+                type="text"
+                placeholder="Note (optional)"
+                value={gradeNote}
+                onChange={(e) => setGradeNote(e.target.value)}
+                disabled={loading}
+                className={INPUT_CLS}
+                style={inputStyle}
+              />
+              <button
+                type="button"
+                onClick={addGradeAvailable}
+                disabled={loading}
+                className="px-3 rounded-[2px]"
+                style={{ background: 'var(--kivi-cyan)', color: '#fff' }}
+              >
+                <Plus size={14} />
+              </button>
+            </div>
+          </div>
+
+          {/* Regulatory Compliance & Standards */}
+          <div className="space-y-2">
+            <div className="flex items-center">
+              <Label>Regulatory Compliance &amp; Standards</Label>
+              <ConfidenceBadge field="regulatory_compliance" />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {(formData.regulatory_compliance || []).map((standard, i) => (
+                <span
+                  key={i}
+                  className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-[2px]"
+                  style={{ background: 'var(--bg-card-alt)', border: '1px solid var(--border-card)', color: 'var(--text-primary)' }}
+                >
+                  {standard}
+                  <button type="button" onClick={() => removeCompliance(i)} disabled={loading}>
+                    <Trash2 size={11} style={{ color: 'var(--kivi-error)' }} />
+                  </button>
+                </span>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="e.g. Meets ISO 3696 Grade 2"
+                value={newCompliance}
+                onChange={(e) => setNewCompliance(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addCompliance())}
+                disabled={loading}
+                className={INPUT_CLS}
+                style={inputStyle}
+              />
+              <button
+                type="button"
+                onClick={addCompliance}
+                disabled={loading}
+                className="px-3 rounded-[2px]"
+                style={{ background: 'var(--kivi-cyan)', color: '#fff' }}
+              >
+                <Plus size={14} />
+              </button>
             </div>
           </div>
 

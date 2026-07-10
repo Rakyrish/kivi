@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import { Product } from '@/types'
+import { hasRealValue } from '@/lib/productDisplay'
 import QuoteRequestModal from './QuoteRequestModal'
 
 interface MolecularContextPanelProps {
@@ -95,7 +96,7 @@ export default function MolecularContextPanel({ product }: MolecularContextPanel
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 font-mono text-sm">
           <div className="space-y-1 bg-white/5 p-3 rounded border border-kivi-cyan/5">
             <span className="text-xs text-[var(--panel-muted-dim)] block">CAS Registry No</span>
-            <span className="text-[var(--panel-text)] font-medium break-all">{product.cas_number || 'N/A'}</span>
+            <span className="text-[var(--panel-text)] font-medium break-all">{hasRealValue(product.cas_number) ? product.cas_number : 'N/A'}</span>
           </div>
           <div className="space-y-1 bg-white/5 p-3 rounded border border-kivi-cyan/5">
             <span className="text-xs text-[var(--panel-muted-dim)] block">Chemical Formula</span>
@@ -103,11 +104,11 @@ export default function MolecularContextPanel({ product }: MolecularContextPanel
           </div>
           <div className="space-y-1 bg-white/5 p-3 rounded border border-kivi-cyan/5">
             <span className="text-xs text-[var(--panel-muted-dim)] block">Assay / Purity</span>
-            <span className="text-[var(--panel-text)]">{product.purity || 'N/A'}</span>
+            <span className="text-[var(--panel-text)]">{hasRealValue(product.purity) ? product.purity : 'N/A'}</span>
           </div>
           <div className="space-y-1 bg-white/5 p-3 rounded border border-kivi-cyan/5">
             <span className="text-xs text-[var(--panel-muted-dim)] block">UN Hazard Class</span>
-            <span className="text-kivi-hazard font-semibold">{product.un_number || 'Non-Regulated'}</span>
+            <span className="text-kivi-hazard font-semibold">{hasRealValue(product.un_number) ? product.un_number : 'Non-Regulated'}</span>
           </div>
         </div>
       </div>

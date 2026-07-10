@@ -71,13 +71,17 @@ class NumberedCanvas(canvas.Canvas):
         self.restoreState()
 
 
-def regenerate_product_content(product_id):
+def regenerate_product_content(product_id, use_web_search=False):
     """
     Rewrites a product's content in place with the full 10-section generation engine.
 
     URL preservation guarantees: slug, image(s), category, documents, inventory,
     and analytics counters are never touched. Only content and SEO metadata change.
     The post_save signal then refreshes the TDS PDF automatically.
+
+    `use_web_search` grants the generation call a live internet search tool — pass
+    True only for single-product regeneration, never bulk (see callers), to bound
+    search cost/latency across a full catalogue run.
 
     Raises on generation failure (the Celery wrapper retries; sync callers surface it).
     """
@@ -96,11 +100,16 @@ def regenerate_product_content(product_id):
         'cas_number': product.cas_number,
         'un_number': product.un_number,
         'grade': product.grade,
+        'brand': product.brand,
+        'manufacturer': product.manufacturer,
         'purity': product.purity,
         'molecular_weight': product.molecular_weight,
         'appearance': product.appearance,
         'applications': product.applications,
         'specifications': product.specifications,
+        'grades_available': product.grades_available,
+        'regulatory_compliance': product.regulatory_compliance,
+        'hazard_classification': product.hazard_classification,
         'packaging': product.packaging,
         'short_description': product.short_description,
     }
@@ -111,6 +120,7 @@ def regenerate_product_content(product_id):
             category=existing['category'],
             image_url_list=product.images or ([product.image] if product.image else None),
             existing=existing,
+            use_web_search=use_web_search,
         )
     except Exception as e:
         log_ai_action("product_text", product.name, "error", 0, str(e), triggered_by="regeneration")
@@ -133,9 +143,9 @@ def regenerate_product_content(product_id):
 
 
 @shared_task(name="apps.products.tasks.regenerate_product_content_task", bind=True, max_retries=2, default_retry_delay=120)
-def regenerate_product_content_task(self, product_id):
+def regenerate_product_content_task(self, product_id, use_web_search=False):
     try:
-        return regenerate_product_content(product_id)
+        return regenerate_product_content(product_id, use_web_search=use_web_search)
     except Exception as e:
         raise self.retry(exc=e)
 

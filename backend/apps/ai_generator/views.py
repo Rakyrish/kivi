@@ -307,6 +307,7 @@ class GenerateProductContentView(APIView):
                 image_b64_list=image_b64_list or None,
                 image_url_list=all_image_urls or None,
                 vision_data=vision_data,
+                use_web_search=True,
             )
             # Final safety net: ensure image URLs are in the content response
             if not content.get('image') and all_image_urls:

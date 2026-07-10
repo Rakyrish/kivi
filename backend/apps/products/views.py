@@ -179,15 +179,19 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'], url_path='regenerate')
     def regenerate(self, request, slug=None):
-        """Regenerate one product's content in place (URL preserved). Sync fallback if broker is down."""
+        """
+        Regenerate one product's content in place (URL preserved). Sync fallback if
+        broker is down. Single-product only, so this is the one path granted a live
+        web_search tool for real CAS/spec/grade grounding.
+        """
         from .tasks import regenerate_product_content_task, regenerate_product_content
         product = self.get_object()
         try:
-            regenerate_product_content_task.delay(product.id)
+            regenerate_product_content_task.delay(product.id, use_web_search=True)
             return Response({'status': 'queued', 'slug': product.slug})
         except Exception:
             try:
-                result = regenerate_product_content(product.id)
+                result = regenerate_product_content(product.id, use_web_search=True)
                 return Response({'status': 'completed', 'slug': product.slug, 'detail': result})
             except Exception as e:
                 return Response({'error': str(e)}, status=status.HTTP_502_BAD_GATEWAY)

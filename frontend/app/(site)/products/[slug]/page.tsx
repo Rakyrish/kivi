@@ -12,6 +12,7 @@ import ProductCard from '@/components/site/ProductCard'
 import MolecularContextPanel from '@/components/site/MolecularContextPanel'
 import DatasheetDownloader from '@/components/site/DatasheetDownloader'
 import { SITE } from '@/lib/constants'
+import { hasRealValue } from '@/lib/productDisplay'
 
 export const revalidate = 3600 // ISR revalidation
 
@@ -155,7 +156,7 @@ export default async function ProductDetailPage({
                     {product.category_name || 'Industrial Formulation'}
                   </span>
                   
-                  {product.chemical_formula && (
+                  {hasRealValue(product.chemical_formula) && (
                     <span className="chemical-formula text-xs bg-kivi-cyan-muted border border-kivi-cyan/20 px-3 py-1 rounded-kivi-sm">
                       {product.chemical_formula}
                     </span>
@@ -167,27 +168,56 @@ export default async function ProductDetailPage({
                   {product.name}
                 </h1>
 
+                {/* Brand / Manufacturer */}
+                {(hasRealValue(product.brand) || hasRealValue(product.manufacturer)) && (
+                  <p className="text-xs text-[var(--paper-muted)] font-sans">
+                    {hasRealValue(product.brand) && <span>Brand: <span className="font-bold text-kivi-navy">{product.brand}</span></span>}
+                    {hasRealValue(product.brand) && hasRealValue(product.manufacturer) && <span className="mx-2">·</span>}
+                    {hasRealValue(product.manufacturer) && <span>Manufactured by: <span className="font-bold text-kivi-navy">{product.manufacturer}</span></span>}
+                  </p>
+                )}
+
                 {/* Properties list */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 border-t border-b border-kivi-gray-light py-4 text-xs font-mono">
-                  {product.cas_number && (
+                  {hasRealValue(product.cas_number) && (
                     <div className="space-y-1">
                       <div className="text-[10px] text-[var(--paper-muted)] uppercase font-sans font-bold">CAS Registry</div>
                       <div className="text-kivi-navy font-bold">{product.cas_number}</div>
                     </div>
                   )}
-                  {product.grade && (
+                  {hasRealValue(product.grade) && (
                     <div className="space-y-1">
                       <div className="text-[10px] text-[var(--paper-muted)] uppercase font-sans font-bold">Grade standard</div>
                       <div className="text-kivi-navy font-bold">{product.grade}</div>
                     </div>
                   )}
-                  {product.un_number && (
+                  {hasRealValue(product.un_number) && (
                     <div className="space-y-1">
                       <div className="text-[10px] text-[var(--paper-muted)] uppercase font-sans font-bold">UN Hazmat Tag</div>
                       <div className="text-kivi-hazard font-bold">{product.un_number}</div>
                     </div>
                   )}
                 </div>
+
+                {/* Grades Available */}
+                {Array.isArray(product.grades_available) && product.grades_available.length > 0 && (
+                  <div className="space-y-2">
+                    <span className="text-xs uppercase font-bold tracking-widest text-kivi-navy block">Grades Available:</span>
+                    <div className="flex flex-wrap gap-2">
+                      {product.grades_available
+                        .filter((g) => g?.grade)
+                        .map((g, idx) => (
+                          <span
+                            key={idx}
+                            title={g.note || undefined}
+                            className="text-xs bg-kivi-cyan-muted border border-kivi-cyan/20 text-kivi-navy px-3 py-1 rounded-kivi-sm font-medium"
+                          >
+                            {g.grade}
+                          </span>
+                        ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Packaging Option */}
                 {product.packaging && (
@@ -376,9 +406,33 @@ export default async function ProductDetailPage({
                       Safety & Handling Guidelines
                     </h2>
                   </div>
+                  {hasRealValue(product.hazard_classification) && (
+                    <p className="text-xs font-bold text-kivi-error leading-relaxed font-sans">
+                      {product.hazard_classification}
+                    </p>
+                  )}
                   <p className="text-xs leading-relaxed text-kivi-navy font-sans">
                     {product.safety_info}
                   </p>
+                </div>
+              )}
+
+              {/* Regulatory Compliance & Standards */}
+              {Array.isArray(product.regulatory_compliance) && product.regulatory_compliance.length > 0 && (
+                <div className="bg-white border border-kivi-gray-light p-6 rounded-kivi space-y-3">
+                  <h2 className="font-display font-black text-xs uppercase tracking-wider text-kivi-navy border-b border-kivi-cyan/15 pb-3">
+                    Regulatory Compliance & Standards
+                  </h2>
+                  <div className="flex flex-wrap gap-2">
+                    {product.regulatory_compliance.map((standard, idx) => (
+                      <span
+                        key={idx}
+                        className="text-xs bg-kivi-gray-light text-kivi-navy px-3 py-1 rounded-kivi-sm border border-kivi-gray-light font-medium"
+                      >
+                        {standard}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

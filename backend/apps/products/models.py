@@ -104,6 +104,22 @@ class Product(models.Model):
     molecular_weight = models.CharField(max_length=30, blank=True)     # e.g. "40.00 g/mol"
     appearance = models.CharField(max_length=150, blank=True)          # e.g. "White crystalline powder"
     grade = models.CharField(max_length=100, blank=True)               # Industrial / Food / Technical / Lab
+    brand = models.CharField(max_length=150, blank=True)
+    manufacturer = models.CharField(max_length=150, blank=True)
+    grades_available = models.JSONField(
+        default=list, blank=True,
+        help_text='Industry-standard grades this chemical genuinely comes in: '
+                   '[{"grade": "Food Grade", "note": "..."}]'
+    )
+    regulatory_compliance = models.JSONField(
+        default=list, blank=True,
+        help_text='["Meets ISO 3696 Grade 2", "REACH registered"]'
+    )
+    hazard_classification = models.CharField(
+        max_length=200, blank=True,
+        help_text="Concise GHS classification summary, e.g. "
+                   "'GHS Category 1B – Corrosive (H314); Signal word: Danger'"
+    )
 
     # ── Packaging ──
     packaging = models.JSONField(

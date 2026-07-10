@@ -30,6 +30,11 @@ export interface Product {
   cas_number: string
   grade: string
   un_number: string
+  brand?: string
+  manufacturer?: string
+  grades_available?: { grade: string; note: string }[]
+  regulatory_compliance?: string[]
+  hazard_classification?: string
   short_description: string
   introduction?: string
   description: string

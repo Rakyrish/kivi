@@ -24,24 +24,7 @@ and the wider East African region:
 3. A senior technical writer who explains complex chemistry in clear, natural prose.
 4. An SEO specialist who writes for real search intent without keyword stuffing.
 
-PRIMARY SOURCE OF TRUTH RULE:
-You must perform strict EVIDENCE-BASED content generation. You are provided with:
-1. Category context
-2. Pre-extracted image vision/OCR data (which contains product name, brand, manufacturer, grade, specifications, weight, and visible packaging text).
-
-Your content (descriptions, applications, benefits, safety advice) must be built ONLY around the facts present in the vision data.
-Do NOT guess or fabricate specifications, grades, chemical formulas, CAS numbers, UN numbers, packaging details, brand names, manufacturers, or product names if they are not explicitly present in or clearly inferable from the vision data.
-
-ANTI-HALLUCINATION RULES:
-- If a field (like chemical_formula, grade, purity, appearance, specifications, packaging, brand, manufacturer, or product name) is not present in the vision data or cannot be determined:
-  Set the field's value exactly to: "Information requires manual verification."
-  Do not attempt to guess or output generic templates.
-  Assign a confidence score for that field between 0 and 50.
-- If information is not available, write "Information requires manual verification." instead of inventing data.
-- EXCEPTION — cas_number, un_number, and molecular_weight are short, strictly length-limited
-  database fields (cas_number <= 20 chars, un_number <= 30 chars, molecular_weight <= 30 chars).
-  If these cannot be determined, set the value to exactly "N/A" instead of the long
-  verification sentence. Never exceed these character limits under any circumstance.
+__SOURCE_OF_TRUTH_RULES__
 
 CONFIDENCE SCORES:
 You must provide a confidence score (from 0 to 100) for every field in a nested dictionary called "confidence_scores".
@@ -113,12 +96,15 @@ preamble, no trailing text:
   
   "packaging_info": "80-150 words explaining available packaging formats and bulk supply options.",
   "packaging": [{"size": "25 kg", "type": "Polypropylene Bag"}],
-  
+
   "storage_handling": "100-200 words of detailed storage/handling guidelines.",
   "safety_info": "80-160 words: hazards, required PPE, first-aid basics, incompatibilities.",
-  
-  "specifications": {"Parameter": "Value"},
-  
+
+  "specifications": {"Parameter": "Value — populate 6-12 genuinely relevant rows for THIS chemical (e.g. appearance, assay/purity, density, solubility, pH of solution, melting/boiling point, flash point, moisture content, bulk density) — only parameters that are chemically meaningful for this substance, not a fixed checklist applied to every product"},
+  "grades_available": [{"grade": "e.g. Food Grade", "note": "Short note on where/why this grade applies, e.g. relevant standard"}],
+  "regulatory_compliance": ["e.g. Meets ISO 3696 Grade 2", "e.g. FCC/JECFA food-grade compliant"],
+  "hazard_classification": "Concise GHS classification summary, e.g. 'GHS Category 1B – Corrosive (H314); Signal word: Danger', or 'Not classified as hazardous under GHS' if applicable, or the verification sentence if genuinely unknown",
+
   "ai_faq": [
     {"question": "FAQ Question", "answer": "FAQ Answer"}
   ],
@@ -148,6 +134,9 @@ preamble, no trailing text:
     "appearance": 100,
     "packaging": 100,
     "specifications": 100,
+    "grades_available": 100,
+    "regulatory_compliance": 100,
+    "hazard_classification": 100,
     "suggested_category": 100,
     "short_description": 100,
     "description": 100
@@ -157,25 +146,165 @@ Generate 6-10 ai_faq entries. Generate 4-8 applications_detailed entries coverin
 genuinely significant use cases for this specific chemical.
 """
 
+# Used when `vision_data` is supplied (a photographed product/label was analyzed in
+# Stage 1) — the OCR'd packaging is the strictest, highest-trust source available,
+# so the model must not override or guess beyond it.
+_VISION_GROUNDED_RULES = """
+PRIMARY SOURCE OF TRUTH RULE:
+You must perform strict EVIDENCE-BASED content generation. You are provided with:
+1. Category context
+2. Pre-extracted image vision/OCR data (which contains product name, brand, manufacturer, grade, specifications, weight, and visible packaging text).
+
+Your content (descriptions, applications, benefits, safety advice) must be built ONLY around the facts present in the vision data.
+Do NOT guess or fabricate specifications, grades, chemical formulas, CAS numbers, UN numbers, packaging details, brand names, manufacturers, or product names if they are not explicitly present in or clearly inferable from the vision data.
+
+ANTI-HALLUCINATION RULES:
+- If a field (like chemical_formula, grade, purity, appearance, specifications, packaging, brand, manufacturer, or product name) is not present in the vision data or cannot be determined:
+  Set the field's value exactly to: "Information requires manual verification."
+  Do not attempt to guess or output generic templates.
+  Assign a confidence score for that field between 0 and 50.
+- If information is not available, write "Information requires manual verification." instead of inventing data.
+- EXCEPTION — cas_number, un_number, and molecular_weight are short, strictly length-limited
+  database fields (cas_number <= 20 chars, un_number <= 30 chars, molecular_weight <= 30 chars).
+  If these cannot be determined, set the value to exactly "N/A" instead of the long
+  verification sentence. Never exceed these character limits under any circumstance.
+"""
+
+# Used when there is NO vision_data — the common case when upgrading/regenerating an
+# already-catalogued product from just its name/category. Previously this call still
+# received the vision-only rules above even though no vision data was ever given in
+# the conversation, which meant the model distrusted facts it actually knew (a real
+# chemical's CAS number is public, checkable data, not a fabrication) and fell back to
+# thin placeholder content. This variant explicitly grants two legitimate sources of
+# truth instead.
+_KNOWLEDGE_GROUNDED_RULES = """
+PRIMARY SOURCE OF TRUTH RULE:
+No product photo was analyzed for this request. Build the content from, in order of
+trust:
+1. The "CONTENT UPGRADE" ground-truth data below, if provided (this product's own
+   verified catalogue record) — never contradict it, only correct clear errors.
+2. Your own well-established chemistry knowledge for objective, checkable facts:
+   CAS number, UN number, chemical formula, molecular weight, typical appearance,
+   and the grade(s) this chemical is genuinely sold in. These are public, verifiable
+   facts about a real substance — state them confidently when well-established,
+   this is not the same as inventing marketing claims.
+3. The web_search tool, when available (see below), to confirm facts and fill gaps
+   the above don't cover.
+
+ANTI-HALLUCINATION RULES:
+- Marketing/narrative content (introduction, benefits, FAQ, applications) must still
+  stay grounded in real, chemically-accurate facts about this specific substance —
+  never invent industry claims, statistics, or regulatory approvals.
+- Only fall back to "Information requires manual verification." (or "N/A" for
+  cas_number/un_number/molecular_weight, which are short length-limited fields
+  <= 20/30/30 chars) if a fact genuinely cannot be determined confidently after
+  considering all three sources above — e.g. a proprietary or obscure blend with no
+  public data. Do not use the placeholder as a default for ordinary, well-documented
+  industrial chemicals.
+- Assign confidence scores per the rules below.
+"""
+
+# Appended only when this call is made with the OpenAI web_search tool enabled
+# (single-product generate/regenerate — never bulk, to bound search cost/latency
+# across a full catalogue run).
+_WEB_SEARCH_ADDENDUM = """
+LIVE WEB SEARCH:
+You have a live web_search tool for this request. Use it to verify or find real
+values for cas_number, un_number, chemical_formula, molecular_weight, appearance,
+purity, grade, grades_available, specifications, regulatory_compliance, and
+hazard_classification whenever they are not already settled by the ground-truth data
+above. Prefer authoritative sources: PubChem, ECHA, NIOSH/CDC, ChemicalBook, a
+manufacturer's own SDS/datasheet page, or KEBS/TBS/UNBS standards documents. When a
+non-obvious fact is drawn from a specific source, add a corresponding entry to
+external_references. Do not fabricate a citation for a fact you did not actually look
+up.
+"""
+
+# Keyword (matched case-insensitively against the product's actual category name) ->
+# short guidance appended to the user message. Guidance only — chemical accuracy
+# always overrides the category; never force a grade onto a chemical that isn't
+# genuinely used that way.
+CATEGORY_GRADE_HINTS = {
+    'food': (
+        "Category-specific note: this product is catalogued under a food/pharmaceutical "
+        "category. If it is genuinely sold as a food-grade or pharmaceutical-grade "
+        "material, reflect that explicitly in `grade`, list it in `grades_available`, "
+        "and cite the applicable standard (FCC, JECFA, USP, BP/Ph.Eur) in "
+        "`regulatory_compliance`. Do not force a food/pharma grade onto a chemical that "
+        "is not realistically used in food or pharma contexts."
+    ),
+    'pharmaceutical': (
+        "Category-specific note: this product is catalogued under a food/pharmaceutical "
+        "category. If it is genuinely sold as a food-grade or pharmaceutical-grade "
+        "material, reflect that explicitly in `grade`, list it in `grades_available`, "
+        "and cite the applicable standard (FCC, JECFA, USP, BP/Ph.Eur) in "
+        "`regulatory_compliance`. Do not force a food/pharma grade onto a chemical that "
+        "is not realistically used in food or pharma contexts."
+    ),
+    'agricultural': (
+        "Category-specific note: consider whether this chemical has a distinct "
+        "agricultural/technical grade and, where genuinely applicable, note any "
+        "relevant registration (e.g. PCPB) in `regulatory_compliance`."
+    ),
+    'farming': (
+        "Category-specific note: consider whether this chemical has a distinct "
+        "agricultural/technical grade and, where genuinely applicable, note any "
+        "relevant registration (e.g. PCPB) in `regulatory_compliance`."
+    ),
+    'mining': (
+        "Category-specific note: focus grade/specifications on what matters for mining "
+        "use (e.g. purity relevant to froth flotation or leaching) rather than generic "
+        "industrial boilerplate."
+    ),
+    'cleaning': (
+        "Category-specific note: where genuinely applicable, note recommended use "
+        "concentration and any relevant standard (e.g. NEMA, WHO) in "
+        "`regulatory_compliance`."
+    ),
+    'disinfection': (
+        "Category-specific note: where genuinely applicable, note recommended use "
+        "concentration and any relevant standard (e.g. NEMA, WHO) in "
+        "`regulatory_compliance`."
+    ),
+}
+
+_DEFAULT_CATEGORY_HINT = (
+    "Category-specific note: default to standard industrial/technical grade framing "
+    "unless this chemical is genuinely known to have a specialized grade relevant to "
+    "its category."
+)
+
+
+def _category_grade_hint(category):
+    category_lower = (category or '').lower()
+    for keyword, hint in CATEGORY_GRADE_HINTS.items():
+        if keyword in category_lower:
+            return hint
+    return _DEFAULT_CATEGORY_HINT
+
+
 CONTENT_FIELDS = [
     'name', 'short_description', 'introduction', 'description',
     'applications', 'applications_detailed', 'benefits_content',
     'packaging_info', 'storage_handling', 'safety_info',
     'packaging', 'specifications',
+    'grades_available', 'regulatory_compliance', 'hazard_classification',
     'ai_faq', 'ai_benefits', 'ai_industries', 'ai_title', 'ai_summary',
     'seo_title', 'seo_description', 'keywords', 'alt_text',
     'internal_links', 'external_references', 'schema_data',
-    'brand', 'manufacturer', 'suggested_category', 'confidence_scores',
+    'suggested_category', 'confidence_scores',
     'image', 'images'
 ]
 
 IDENTITY_FIELDS = [
     'chemical_formula', 'cas_number', 'un_number', 'grade',
     'purity', 'molecular_weight', 'appearance',
+    'brand', 'manufacturer',
 ]
 
 LIST_FIELDS = {'applications', 'applications_detailed', 'packaging', 'ai_faq',
-               'ai_benefits', 'ai_industries', 'internal_links', 'external_references', 'images'}
+               'ai_benefits', 'ai_industries', 'internal_links', 'external_references',
+               'images', 'grades_available', 'regulatory_compliance'}
 DICT_FIELDS = {'specifications', 'schema_data', 'confidence_scores'}
 
 # Mirrors apps.products.models.Product CharField max_length constraints. The model can
@@ -190,12 +319,15 @@ FIELD_MAX_LENGTHS = {
     'molecular_weight': 30,
     'appearance': 150,
     'grade': 100,
+    'brand': 150,
+    'manufacturer': 150,
     'short_description': 300,
     'seo_title': 60,
     'seo_description': 160,
     'keywords': 300,
     'alt_text': 200,
     'ai_title': 200,
+    'hazard_classification': 200,
 }
 
 # Precise identifiers where truncation would corrupt the value rather than just
@@ -269,49 +401,21 @@ def _normalize(content):
     return content
 
 
-def generate_product_content(product_name='', category='', image_b64=None,
-                             image_url=None, existing=None,
-                             image_b64_list=None, image_url_list=None,
-                             vision_data=None):
-    """
-    Returns (content_dict, tokens_used).
-    `existing` — dict of the current product data during regeneration.
-    `vision_data` — pre-extracted JSON from Stage 1.
-    """
-    if is_mock_mode():
-        name_val = product_name
-        if vision_data and vision_data.get("product_name"):
-            name_val = vision_data.get("product_name")
-        return _mock_content(name_val or 'Sodium Hydroxide', vision_data), 0
+def _build_system_prompt(vision_data, use_web_search):
+    rules = _VISION_GROUNDED_RULES if vision_data else _KNOWLEDGE_GROUNDED_RULES
+    prompt = SYSTEM_PROMPT.replace('__SOURCE_OF_TRUTH_RULES__', rules.strip())
+    if use_web_search:
+        prompt += "\n" + _WEB_SEARCH_ADDENDUM
+    return prompt
 
-    user_parts = []
-    text = ""
-    if vision_data:
-        text += f"Generate complete B2B marketing product content strictly using this pre-extracted image vision analysis: {json.dumps(vision_data)}."
-    else:
-        text += f"Generate complete product content for: '{product_name or 'the chemical'}'"
-        
-    if category:
-        text += f" in category: '{category}'"
-    text += "."
 
-    if existing:
-        known = {k: v for k, v in existing.items() if v}
-        if known:
-            text += (
-                "\n\nThis is a CONTENT UPGRADE of an existing catalogue product. The current "
-                "verified data below is ground truth — keep these facts consistent, correct "
-                "only clear errors, and write substantially richer content around them:\n"
-                + json.dumps(known, ensure_ascii=False, default=str)[:4000]
-            )
-            
-    user_parts.append({"type": "text", "text": text})
-
-    client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
+def _call_chat_completions(client, system_prompt, user_parts):
+    """Non-grounded generation call — the long-standing behavior, used for bulk
+    regeneration and as the fallback if a web-search-enabled call fails."""
     response = client.chat.completions.create(
         model=getattr(settings, 'OPENAI_MODEL', 'gpt-4o-mini'),
         messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_parts},
         ],
         temperature=0.55,
@@ -319,6 +423,90 @@ def generate_product_content(product_name='', category='', image_b64=None,
         max_tokens=8000,
     )
     content = json.loads(response.choices[0].message.content.strip())
+    tokens = getattr(response.usage, 'total_tokens', 0)
+    return content, tokens
+
+
+def _call_with_web_search(client, system_prompt, user_text):
+    """Grounded generation call via the Responses API's hosted web_search tool —
+    lets the model look up real CAS numbers, specifications, and standards instead
+    of relying only on trained knowledge. Single-product paths only (see callers)."""
+    response = client.responses.create(
+        model="gpt-4o",
+        tools=[{"type": "web_search_preview"}],
+        input=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_text},
+        ],
+        text={"format": {"type": "json_object"}},
+    )
+    content = json.loads(response.output_text.strip())
+    tokens = getattr(response.usage, 'total_tokens', 0)
+    return content, tokens
+
+
+def generate_product_content(product_name='', category='', image_b64=None,
+                             image_url=None, existing=None,
+                             image_b64_list=None, image_url_list=None,
+                             vision_data=None, use_web_search=False):
+    """
+    Returns (content_dict, tokens_used).
+    `existing` — dict of the current product data during regeneration.
+    `vision_data` — pre-extracted JSON from Stage 1.
+    `use_web_search` — grant the model a live internet search tool (single-product
+    generate/regenerate only — never bulk, to bound search cost across a full
+    catalogue run). Falls back to the non-grounded call if the tool call fails
+    (e.g. not available on the configured OpenAI account).
+    """
+    if is_mock_mode():
+        name_val = product_name
+        if vision_data and vision_data.get("product_name"):
+            name_val = vision_data.get("product_name")
+        return _mock_content(name_val or 'Sodium Hydroxide', vision_data), 0
+
+    text = ""
+    if vision_data:
+        text += f"Generate complete B2B marketing product content strictly using this pre-extracted image vision analysis: {json.dumps(vision_data)}."
+    else:
+        text += f"Generate complete product content for: '{product_name or 'the chemical'}'"
+
+    if category:
+        text += f" in category: '{category}'"
+        text += "\n\n" + _category_grade_hint(category)
+    text += "."
+
+    if existing:
+        known = {k: v for k, v in existing.items() if v}
+        if known:
+            text += (
+                "\n\nThis is a CONTENT UPGRADE of an existing catalogue product. The current "
+                "verified data below is ground truth — keep these identity facts (name, "
+                "chemical_formula, cas_number, un_number, grade, brand, manufacturer) "
+                "consistent, correct only clear errors, and write substantially richer "
+                "content around them. EXCEPTION — `specifications`: the listed rows are a "
+                "correct but incomplete starting point, not the final set; keep them but "
+                "expand to the full 6-12 relevant rows the instructions call for, don't "
+                "just repeat the same subset back:\n"
+                + json.dumps(known, ensure_ascii=False, default=str)[:4000]
+            )
+
+    system_prompt = _build_system_prompt(vision_data, use_web_search)
+    client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
+
+    if use_web_search:
+        try:
+            content, tokens = _call_with_web_search(client, system_prompt, text)
+        except Exception:
+            # Web search tool/model unavailable on this account, or a transient
+            # Responses API error — degrade gracefully rather than failing the
+            # whole request; the admin still gets content, just not grounded.
+            user_parts = [{"type": "text", "text": text}]
+            fallback_prompt = _build_system_prompt(vision_data, use_web_search=False)
+            content, tokens = _call_chat_completions(client, fallback_prompt, user_parts)
+    else:
+        user_parts = [{"type": "text", "text": text}]
+        content, tokens = _call_chat_completions(client, system_prompt, user_parts)
+
     content = _normalize(content)
 
     image_val = ''
@@ -335,7 +523,6 @@ def generate_product_content(product_name='', category='', image_b64=None,
     content['images'] = content.get('images') or images_val
 
     content['ai_generated'] = True
-    tokens = getattr(response.usage, 'total_tokens', 0)
     return content, tokens
 
 
@@ -406,6 +593,11 @@ def _mock_content(name, vision_data=None):
             "Appearance": "White crystalline solid",
             "Purity": "99.0% min",
         },
+        "grades_available": [
+            {"grade": grade, "note": f"Standard commercial grade of {name} stocked by Kivi Chemicals."},
+        ],
+        "regulatory_compliance": [],
+        "hazard_classification": "Information requires manual verification.",
         "ai_faq": [
             {"question": f"What grades of {name} does Kivi Chemicals stock?", "answer": f"Industrial and technical grades are held in stock by Kivi Chemicals."}
         ],

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { FileText, Download, ShieldAlert, Check } from 'lucide-react'
 import type { Product } from '@/types'
 import { SITE } from '@/lib/constants'
+import { hasRealValue } from '@/lib/productDisplay'
 
 interface DatasheetDownloaderProps {
   product: Product
@@ -266,19 +267,19 @@ export default function DatasheetDownloader({ product }: DatasheetDownloaderProp
         <div class="meta-grid">
           <div class="meta-item">
             <div class="meta-label">CAS Registry</div>
-            <div class="meta-value">${product.cas_number || '—'}</div>
+            <div class="meta-value">${hasRealValue(product.cas_number) ? product.cas_number : '—'}</div>
           </div>
           <div class="meta-item">
             <div class="meta-label">Chemical Formula</div>
-            <div class="meta-value mono">${product.chemical_formula || '—'}</div>
+            <div class="meta-value mono">${hasRealValue(product.chemical_formula) ? product.chemical_formula : '—'}</div>
           </div>
           <div class="meta-item">
             <div class="meta-label">Grade Standard</div>
-            <div class="meta-value">${product.grade || 'Industrial'}</div>
+            <div class="meta-value">${hasRealValue(product.grade) ? product.grade : 'Industrial'}</div>
           </div>
           <div class="meta-item">
             <div class="meta-label">UN Hazmat Tag</div>
-            <div class="meta-value">${product.un_number || 'Non-regulated'}</div>
+            <div class="meta-value">${hasRealValue(product.un_number) ? product.un_number : 'Non-regulated'}</div>
           </div>
         </div>
 
