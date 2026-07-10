@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowUpRight, MessageSquare, Bookmark, FlaskConical } from 'lucide-react'
-import { ROUTES } from '@/lib/constants'
+import { MessageCircle, Bookmark, FlaskConical } from 'lucide-react'
+import { ROUTES, SITE } from '@/lib/constants'
 import { Product } from '@/types'
 import { api } from '@/lib/api'
 
@@ -13,7 +13,33 @@ interface ProductCardProps {
   view?: 'grid' | 'table'
 }
 
+// Builds a pre-filled WhatsApp enquiry link containing the product name, key specs,
+// and the full product page URL. Falls back to the in-site contact form when no
+// WhatsApp number is configured.
+function buildEnquiryHref(product: Product): { href: string; isWhatsApp: boolean } {
+  const digits = SITE.whatsapp.replace(/\D/g, '')
+  const productUrl = `${SITE.url}${ROUTES.products}/${product.slug}`
+
+  if (!digits) {
+    return { href: `${ROUTES.contact}?product=${product.slug}`, isWhatsApp: false }
+  }
+
+  const message = [
+    'Hello Kivi Chemicals, I would like to enquire about a product.',
+    '',
+    `Product: ${product.name}`,
+    product.chemical_formula ? `Formula: ${product.chemical_formula}` : '',
+    product.cas_number ? `CAS: ${product.cas_number}` : '',
+    product.grade ? `Grade: ${product.grade}` : '',
+    '',
+    `Link: ${productUrl}`,
+  ].filter(Boolean).join('\n')
+
+  return { href: `https://wa.me/${digits}?text=${encodeURIComponent(message)}`, isWhatsApp: true }
+}
+
 export default function ProductCard({ product, view = 'grid' }: ProductCardProps) {
+  const enquiry = buildEnquiryHref(product)
   const [isSaved, setIsSaved] = useState(false)
 
   useEffect(() => {
@@ -30,7 +56,7 @@ export default function ProductCard({ product, view = 'grid' }: ProductCardProps
               const hasIt = res.some((item) => item.product_details?.slug === product.slug)
               if (hasIt) setIsSaved(true)
             })
-            .catch(() => {})
+            .catch(() => { })
         }
       }
     }
@@ -121,9 +147,21 @@ export default function ProductCard({ product, view = 'grid' }: ProductCardProps
             <Link href={`${ROUTES.products}/${product.slug}`} className="text-[10px] font-bold uppercase tracking-wider px-2 py-1.5 rounded-[2px] border transition-all" style={{ color: 'var(--kivi-cyan)', borderColor: 'var(--border-input)' }}>
               View
             </Link>
-            <Link href={`${ROUTES.contact}?product=${product.slug}`} className="text-[10px] font-bold uppercase tracking-wider px-2 py-1.5 rounded-[2px] transition-all" style={{ background: 'var(--kivi-cyan)', color: '#002040' }}>
-              Quote
-            </Link>
+            {enquiry.isWhatsApp ? (
+              <a
+                href={enquiry.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[10px] font-bold uppercase tracking-wider px-2 py-1.5 rounded-[2px] transition-all hover:brightness-110"
+                style={{ background: 'var(--kivi-success)', color: 'var(--kivi-white)' }}
+              >
+                WhatsApp
+              </a>
+            ) : (
+              <Link href={enquiry.href} className="text-[10px] font-bold uppercase tracking-wider px-2 py-1.5 rounded-[2px] transition-all" style={{ background: 'var(--kivi-cyan)', color: '#002040' }}>
+                Quote
+              </Link>
+            )}
             <button
               onClick={handleSave}
               className="p-1.5 rounded-[2px] border transition-all"
@@ -143,74 +181,57 @@ export default function ProductCard({ product, view = 'grid' }: ProductCardProps
   }
 
   return (
-    <div
-      className="group border rounded-[4px] overflow-hidden flex flex-col h-full transition-all duration-300"
-      style={{
-        background: 'var(--bg-card)',
-        borderColor: 'var(--border-card)',
-        boxShadow: 'var(--shadow-card)',
-      }}
-    >
-      {/* Product Image */}
-      <div className="relative aspect-video w-full overflow-hidden" style={{ background: 'var(--bg-card-alt)' }}>
-        {product.image ? (
-          <Image
-            src={product.image}
-            alt={product.alt_text || product.name}
-            fill
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            className="object-cover group-hover:scale-105 transition-transform duration-500"
-            loading="lazy"
-          />
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <FlaskConical size={40} style={{ color: 'var(--kivi-cyan)', opacity: 0.25 }} />
-          </div>
-        )}
+    <div className="group relative theme-card rounded-[4px] overflow-hidden flex flex-col h-full transition-all duration-300 hover:-translate-y-1">
+      {/* Product image — full picture, never cropped */}
+      <div className="relative aspect-square w-full overflow-hidden" style={{ background: 'var(--bg-card-alt)' }}>
+        <div className="absolute inset-3 sm:inset-4">
+          {product.image ? (
+            <Image
+              src={product.image}
+              alt={product.alt_text || product.name}
+              fill
+              sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 20vw"
+              className="object-contain group-hover:scale-105 transition-transform duration-500"
+              loading="lazy"
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <FlaskConical size={48} style={{ color: 'var(--kivi-cyan)', opacity: 0.25 }} />
+            </div>
+          )}
+        </div>
 
-        {/* Save button */}
+        {/* Status tags */}
+        {/* {(product.is_featured || !product.in_stock) && (
+          <div className="absolute top-2.5 left-2.5 flex gap-1.5">
+
+            {!product.in_stock && (
+              <span className="text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-[2px] badge-out-of-stock">
+                Out of Stock
+              </span>
+            )}
+          </div>
+        )} */}
+
+        {/* Save / favourites */}
         <button
           onClick={handleSave}
-          className="absolute top-2.5 right-2.5 p-1.5 rounded-[2px] backdrop-blur-md transition-all duration-200 z-10"
+          className="absolute top-2.5 right-2.5 z-10 p-1.5 rounded-[2px] backdrop-blur-md transition-all duration-200"
           style={{
             background: 'rgba(0,32,64,0.4)',
             border: '1px solid rgba(0,160,192,0.2)',
             color: isSaved ? 'var(--kivi-cyan)' : 'var(--kivi-white)',
           }}
-          title={isSaved ? "Saved to favorites" : "Save product"}
+          title={isSaved ? 'Saved to favorites' : 'Save product'}
+          aria-label={isSaved ? 'Remove from saved' : 'Save product'}
+          aria-pressed={isSaved}
         >
-          <Bookmark size={14} fill={isSaved ? "var(--kivi-cyan)" : "none"} />
+          <Bookmark size={14} fill={isSaved ? 'var(--kivi-cyan)' : 'none'} />
         </button>
-
-        {/* Tags */}
-        <div className="absolute top-2.5 left-2.5 right-2.5 flex justify-between">
-          {product.is_featured && (
-            <span className="text-[9px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-[2px]" style={{ background: 'var(--kivi-cyan)', color: '#002040' }}>
-              Featured
-            </span>
-          )}
-          {!product.in_stock && (
-            <span className="ml-auto text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-[2px] badge-out-of-stock">
-              Out of Stock
-            </span>
-          )}
-        </div>
-
-        {/* Quick Quote overlay on hover */}
-        <div className="absolute inset-0 flex items-end opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 50%)' }}>
-          <Link
-            href={`${ROUTES.contact}?product=${product.slug}`}
-            className="w-full mx-2.5 mb-2.5 flex items-center justify-center gap-2 py-2 text-[10px] font-bold uppercase tracking-wider rounded-[2px] transition-all"
-            style={{ background: 'var(--kivi-cyan)', color: '#002040' }}
-          >
-            <MessageSquare size={12} /> Quick Quote
-          </Link>
-        </div>
       </div>
 
-
-      {/* Card Body */}
-      <div className="p-4 flex flex-col flex-grow">
+      {/* Card body */}
+      <div className="p-3 sm:p-4 flex flex-col flex-grow">
         {/* Category & Formula */}
         <div className="flex items-center justify-between gap-2 mb-2">
           <span className="text-[10px] uppercase tracking-wider font-bold" style={{ color: 'var(--kivi-cyan)' }}>
@@ -224,43 +245,57 @@ export default function ProductCard({ product, view = 'grid' }: ProductCardProps
         </div>
 
         {/* Name */}
-        <h3 className="font-display font-bold text-sm mb-1.5 line-clamp-1 group-hover:text-[var(--kivi-cyan)] transition-colors" style={{ color: 'var(--text-primary)' }}>
+        <h3 className="font-display font-bold text-sm mb-1.5 line-clamp-2 group-hover:text-[var(--kivi-cyan)] transition-colors" style={{ color: 'var(--text-primary)' }}>
           {product.name}
         </h3>
 
         {/* Description */}
-        <p className="text-xs line-clamp-2 mb-4 leading-relaxed flex-grow" style={{ color: 'var(--text-secondary)' }}>
+        <p className="text-xs line-clamp-2 mb-3 leading-relaxed flex-grow" style={{ color: 'var(--text-secondary)' }}>
           {product.short_description}
         </p>
 
         {/* Stock & CAS */}
-        <div className="flex items-center justify-between gap-3 mb-4">
+        {/* <div className="flex items-center justify-between gap-3 mb-3">
           <span className={`rounded-[2px] px-2 py-1 text-[9px] uppercase tracking-wider font-bold ${product.in_stock ? 'badge-in-stock' : 'badge-out-of-stock'}`}>
-            {product.in_stock ? 'Available' : 'Confirm Supply'}
+            {product.in_stock ? 'Available' : 'Available'}
           </span>
           {product.cas_number && (
             <span className="cas-number truncate">{product.cas_number}</span>
           )}
-        </div>
+        </div> */}
 
-        {/* Actions */}
-        <div className="mt-auto grid grid-cols-2 gap-2">
-          <Link
-            href={`${ROUTES.products}/${product.slug}`}
-            className="inline-flex items-center justify-center gap-1.5 py-2 text-xs font-bold uppercase tracking-wider rounded-[2px] border transition-all duration-300"
-            style={{ color: 'var(--kivi-cyan)', borderColor: 'var(--border-input)', background: 'transparent' }}
+        {/* WhatsApp enquiry — single, always-visible CTA */}
+        {enquiry.isWhatsApp ? (
+          <a
+            href={enquiry.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="relative z-10 inline-flex items-center justify-center gap-2 py-2.5 text-xs font-bold uppercase tracking-wider rounded-[2px] transition-all duration-300 hover:brightness-110"
+            style={{ background: 'var(--kivi-success)', color: 'var(--kivi-white)' }}
+            title={`Enquire about ${product.name} on WhatsApp`}
           >
-            Details <ArrowUpRight size={13} />
-          </Link>
+            <MessageCircle size={14} /> WhatsApp
+          </a>
+        ) : (
           <Link
-            href={`${ROUTES.contact}?product=${product.slug}`}
-            className="inline-flex items-center justify-center gap-1.5 py-2 text-xs font-bold uppercase tracking-wider rounded-[2px] transition-all duration-300"
+            href={enquiry.href}
+            onClick={(e) => e.stopPropagation()}
+            className="relative z-10 inline-flex items-center justify-center gap-2 py-2.5 text-xs font-bold uppercase tracking-wider rounded-[2px] transition-all duration-300"
             style={{ background: 'var(--kivi-cyan)', color: '#002040' }}
+            title={`Request a quote for ${product.name}`}
           >
-            Quote <MessageSquare size={13} />
+            <MessageCircle size={14} /> Get Quote
           </Link>
-        </div>
+        )}
       </div>
+
+      {/* Whole-card click → product details */}
+      <Link
+        href={`${ROUTES.products}/${product.slug}`}
+        className="absolute inset-0"
+        aria-label={`View ${product.name} details`}
+      />
     </div>
   )
 }

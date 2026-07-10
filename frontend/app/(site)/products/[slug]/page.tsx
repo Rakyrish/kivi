@@ -483,7 +483,7 @@ export default async function ProductDetailPage({
               <h2 className="font-display font-black text-lg text-kivi-navy uppercase tracking-wide">
                 Related Formulations
               </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
                 {relatedProducts.map((p) => (
                   <ProductCard key={p.id} product={p} />
                 ))}

@@ -24,11 +24,30 @@ export const metadata: Metadata = buildMetadata({
 })
 
 async function getData() {
-  let featuredProducts: Product[] = []
   let categories: Category[] = []
-  try { featuredProducts = (await api.getFeaturedProducts()) || [] } catch {}
   try { categories = (await api.getCategories()) || [] } catch {}
-  return { featuredProducts, categories }
+
+  // Featured products grouped by category — one clean row per category on the
+  // homepage. The product list defaults to ordering by featured then recent,
+  // so 5 per category surfaces the featured items first.
+  const groups: { category: Category; products: Product[] }[] = []
+  let totalProductCount = 0
+  if (categories.length > 0) {
+    const results = await Promise.all(
+      categories.map((category) =>
+        api
+          .getProducts({ category: category.slug, page_size: 5 })
+          .then((res) => ({ category, products: res.results || [], count: res.count }))
+          .catch(() => ({ category, products: [], count: 0 }))
+      )
+    )
+    for (const { category, products, count } of results) {
+      if (products.length > 0) groups.push({ category, products })
+      totalProductCount += count || products.length
+    }
+  }
+
+  return { groups, categories, totalProductCount }
 }
 
 const INDUSTRIES = [
@@ -52,7 +71,7 @@ const WHY_KIVI = [
 ]
 
 export default async function HomePage() {
-  const { featuredProducts, categories } = await getData()
+  const { groups, categories, totalProductCount } = await getData()
 
   return (
     <>
@@ -61,7 +80,7 @@ export default async function HomePage() {
       <SchemaMarkup schema={localBusinessSchema()} />
 
       {/* 1 — Hero */}
-      <HeroSection productCount={featuredProducts.length} categoryCount={categories.length} />
+      <HeroSection productCount={totalProductCount} categoryCount={categories.length} />
 
       {/* 2 — Trust Strip */}
       <section className="border-y py-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-divider)' }}>
@@ -88,7 +107,7 @@ export default async function HomePage() {
       </section>
 
       {/* 3 — Featured Products */}
-      <FeaturedProducts products={featuredProducts} />
+      <FeaturedProducts groups={groups} />
 
       {/* 4 — Categories Section */}
       <section id="categories" className="py-20" style={{ background: 'var(--bg-page)' }}>
