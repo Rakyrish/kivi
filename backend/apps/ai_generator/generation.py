@@ -54,8 +54,22 @@ BRAND RULES:
   FIVE times in total across introduction, description, benefits_content, packaging_info,
   storage_handling, and faq answers combined. Weave mentions into buying/supply context
   ("Kivi Chemicals supplies...", "buyers sourcing from Kivi Chemicals...") — never stuff.
-- The "name" field MUST follow the format "[Standard Chemical Name] Kenya Uganda Tanzania"
-  (e.g. "Caustic Soda Flakes Kenya Uganda Tanzania").
+- The "name" field is the PLAIN standard chemical/product name ONLY — e.g. "Caustic Soda
+  Flakes", never "Caustic Soda Flakes Kenya Uganda Tanzania". This field feeds the page's
+  <h1>, the schema.org Product name, and the URL slug directly — keep it clean and accurate.
+  Geo-targeting belongs in seo_title / seo_description / keywords, not in the product's name.
+
+SCALE-SAFETY RULE — this content will sit alongside hundreds of other product pages on the
+same domain. Search engines explicitly flag many pages that share an identical template with
+only the subject swapped, even when each page is individually well-written, as low-value
+"scaled content." To avoid that pattern at catalogue scale:
+- Never reuse a fixed title/opening formula verbatim across products. Vary how you phrase
+  geo-targeting, sentence openings, and section transitions from one product to the next —
+  write as if a different specialist is describing each specific chemical, not as if filling
+  in a template with the subject swapped.
+- Geo-target naturally and vary the phrasing product to product — sometimes "Kenya",
+  sometimes "Kenya & East Africa", sometimes "Kenya, Uganda and Tanzania" — driven by what
+  reads naturally for THIS chemical's real buyers, never a copy-pasted suffix.
 
 QUALITY RULES (strict):
 - Every sentence must carry real information. No filler, no generic paragraphs that could
@@ -67,11 +81,15 @@ QUALITY RULES (strict):
   mining, agriculture, food processing) where genuinely applicable to THIS chemical.
 - Usefulness beats word count. Hit the target ranges but never pad.
 - Facts must be chemically accurate. If a property does not apply, use "Information requires manual verification." rather than inventing data.
+- When copying a CAS number or UN number from vision data, transcribe it EXACTLY
+  character-for-character. A single mistyped digit produces an invalid, checksum-failing
+  registry number for a real chemical — this is checked automatically and undermines buyer
+  trust in the whole catalogue when it happens.
 
 Return ONLY a valid JSON object with this exact structure — no markdown fences, no
 preamble, no trailing text:
 {
-  "name": "[Standard Chemical Name] Kenya Uganda Tanzania",
+  "name": "Plain standard chemical/product name only, no geo-suffix, e.g. 'Caustic Soda Flakes'",
   "brand": "Brand name, or 'Information requires manual verification.' if not in vision data",
   "manufacturer": "Manufacturer name, or 'Information requires manual verification.' if not in vision data",
   "grade": "e.g. Industrial Grade / Food Grade / Technical Grade, or 'Information requires manual verification.' if not in vision data",
@@ -109,8 +127,8 @@ preamble, no trailing text:
   "ai_title": "Blog-style informational title for this product",
   "ai_summary": "1-2 sentence summary of industrial relevance",
   
-  "seo_title": "STRICT MAX 60 chars including spaces, e.g., 'Buy Caustic Soda Kenya | Kivi Chemicals'",
-  "seo_description": "140-160 chars, mentioning supply across Kenya, Uganda, Tanzania.",
+  "seo_title": "STRICT MAX 60 chars including spaces. Lead with the chemical name plus a real commercial-intent word (Buy/Supplier/Price), geo-qualify naturally — vary the phrasing product to product rather than repeating one fixed formula, e.g. 'Buy Caustic Soda Flakes Kenya | Kivi Chemicals' or 'Caustic Soda Supplier — Kenya & East Africa'.",
+  "seo_description": "140-160 chars. A natural sentence mentioning delivery across Kenya/East Africa — vary the wording product to product rather than reusing one template sentence.",
   "keywords": "comma-separated keywords",
   "alt_text": "Descriptive image alt text for accessibility and image SEO",
   "internal_links": [{"title": "Anchor text", "slug": "slug"}],
@@ -180,10 +198,53 @@ FIELD_MAX_LENGTHS = {
     'ai_title': 200,
 }
 
+# Precise identifiers where truncation would corrupt the value rather than just
+# shorten it (cutting "1310-73-2" to "1310-73" isn't a shorter CAS number, it's a
+# wrong one). If the model overflows these, fall back to its own "unknown" convention
+# instead of emitting a mangled identifier.
+_IDENTITY_OVERFLOW_FALLBACK = {
+    'chemical_formula': 'Information requires manual verification.',
+    'cas_number': 'N/A',
+    'un_number': 'N/A',
+    'molecular_weight': 'N/A',
+}
+
 
 def is_mock_mode():
     api_key = getattr(settings, 'OPENAI_API_KEY', '')
     return not api_key or 'mock' in api_key.lower()
+
+
+def mock_mode_block(allow_mock=False):
+    """
+    Returns (blocked: bool, detail: str|None). Production callers that touch many
+    products in one request (bulk regeneration, per-product generation used to build
+    out a large catalogue) should refuse to proceed when this returns blocked=True,
+    rather than silently writing near-identical templated placeholder content across
+    every product touched — that's exactly the "scaled duplicate content" pattern
+    search engines penalize, and it's otherwise indistinguishable after the fact since
+    the resulting rows still carry the ordinary ai_generated=True flag.
+    Local/dev use (DEBUG=True) is never blocked; pass allow_mock=True to override
+    deliberately elsewhere (e.g. staging smoke tests without a real API key).
+    """
+    if not is_mock_mode() or allow_mock or settings.DEBUG:
+        return False, None
+    return True, (
+        'OPENAI_API_KEY is not configured or invalid — generating content now would '
+        'produce near-identical templated placeholder text instead of real AI content '
+        'for every product touched. Fix OPENAI_API_KEY first, or pass '
+        '{"allow_mock": true} to proceed deliberately.'
+    )
+
+
+def _truncate_at_word_boundary(text, max_len):
+    """Cut prose to at most max_len characters without splitting a word in half."""
+    if len(text) <= max_len:
+        return text
+    truncated = text[:max_len]
+    if ' ' in truncated:
+        truncated = truncated.rsplit(' ', 1)[0]
+    return truncated.rstrip()
 
 
 def _normalize(content):
@@ -201,7 +262,10 @@ def _normalize(content):
                 content[field] = str(content.get(field) or '')
             max_len = FIELD_MAX_LENGTHS.get(field)
             if max_len and len(content[field]) > max_len:
-                content[field] = content[field][:max_len].rstrip()
+                if field in _IDENTITY_OVERFLOW_FALLBACK:
+                    content[field] = _IDENTITY_OVERFLOW_FALLBACK[field]
+                else:
+                    content[field] = _truncate_at_word_boundary(content[field], max_len)
     return content
 
 
@@ -293,7 +357,7 @@ def _mock_content(name, vision_data=None):
         packaging_type = pkg
 
     mock = {
-        "name": f"{name} Kenya Uganda Tanzania",
+        "name": name,
         "brand": brand,
         "manufacturer": manufacturer,
         "grade": grade,
@@ -352,9 +416,9 @@ def _mock_content(name, vision_data=None):
         "ai_industries": ["Water Treatment", "Manufacturing"],
         "ai_title": f"A Procurement Guide to Sourcing {name} in East Africa",
         "ai_summary": f"How East African plants specify, buy, and handle {name} for reliable production.",
-        "seo_title": f"Buy {name} Kenya Uganda Tanzania | Kivi Chemicals",
+        "seo_title": f"Buy {name} Kenya | Kivi Chemicals",
         "seo_description": f"Premium grade {name} delivered across Kenya, Uganda and Tanzania. Request a quote today.",
-        "keywords": f"{name} Kenya, buy {name} Nairobi",
+        "keywords": f"{name} Kenya, buy {name} Nairobi, {name} Kenya Uganda Tanzania",
         "alt_text": f"Packaging of industrial grade {name}",
         "internal_links": [],
         "external_references": [],

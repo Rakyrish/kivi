@@ -44,10 +44,28 @@ GENERIC_PHRASES = [
 ]
 
 _WORD_RE = re.compile(r"[a-z0-9']+")
+_CAS_RE = re.compile(r'^\d{2,7}-\d{2}-\d$')
 
 
 def _word_count(text):
     return len((text or '').split())
+
+
+def _is_valid_cas_number(cas):
+    """
+    Validates a CAS Registry Number's check digit — cheap, deterministic, and needs
+    no external API. Format is [2-7 digits]-[2 digits]-[1 check digit], e.g.
+    "1310-73-2". The check digit is the sum of all preceding digits (read right to
+    left, each multiplied by its 1-indexed position) mod 10. Catches hallucinated or
+    OCR-transcription-mangled CAS numbers before they reach a live product page.
+    """
+    if not _CAS_RE.match(cas or ''):
+        return False
+    digits = cas.replace('-', '')
+    check_digit = int(digits[-1])
+    body = digits[:-1]
+    total = sum(int(d) * (i + 1) for i, d in enumerate(reversed(body)))
+    return total % 10 == check_digit
 
 
 def _normalize_opening(text, n_words=10):
@@ -104,6 +122,14 @@ def check_product(product):
             'type': 'thin_section', 'field': 'applications_detailed', 'severity': 'medium',
             'detail': f'Only {apps_count} applications explained individually (target 4-8).',
         })
+
+    cas = (product.cas_number or '').strip()
+    if cas and cas.upper() != 'N/A' and 'verification' not in cas.lower():
+        if not _is_valid_cas_number(cas):
+            issues.append({
+                'type': 'invalid_cas_number', 'field': 'cas_number', 'severity': 'high',
+                'detail': f'"{cas}" fails CAS check-digit validation — likely fabricated or mistyped.',
+            })
 
     full_text = ' '.join(filter(None, [
         product.introduction, product.description, product.benefits_content,

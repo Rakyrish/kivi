@@ -199,6 +199,11 @@ class ProductViewSet(viewsets.ModelViewSet):
         whole catalogue ({"all": true}). Tasks are staggered to respect OpenAI limits.
         """
         from .tasks import regenerate_product_content_task
+        from apps.ai_generator.generation import mock_mode_block
+
+        blocked, detail = mock_mode_block(allow_mock=bool(request.data.get('allow_mock')))
+        if blocked:
+            return Response({'error': detail}, status=status.HTTP_412_PRECONDITION_FAILED)
 
         if request.data.get('all'):
             queryset = Product.objects.all()

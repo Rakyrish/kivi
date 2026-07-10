@@ -192,7 +192,11 @@ class GenerateProductContentView(APIView):
     permission_classes = [IsAdminUser]
 
     def post(self, request):
-        from .generation import generate_product_content
+        from .generation import generate_product_content, mock_mode_block
+
+        blocked, detail = mock_mode_block(allow_mock=bool(request.data.get('allow_mock')))
+        if blocked:
+            return Response({'error': detail}, status=status.HTTP_412_PRECONDITION_FAILED)
 
         product_name = request.data.get('product_name', '').strip()
         category = request.data.get('category', '').strip()
