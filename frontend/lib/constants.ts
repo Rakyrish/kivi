@@ -11,6 +11,8 @@ export const SITE = {
   city: process.env.NEXT_PUBLIC_COMPANY_CITY || 'Nairobi',
   country: process.env.NEXT_PUBLIC_COMPANY_COUNTRY || 'Kenya',
   openingHours: process.env.NEXT_PUBLIC_COMPANY_OPENING_HOURS || '',
+  latitude: process.env.NEXT_PUBLIC_COMPANY_LATITUDE || '',
+  longitude: process.env.NEXT_PUBLIC_COMPANY_LONGITUDE || '',
   keywords: process.env.NEXT_PUBLIC_DEFAULT_KEYWORDS || '',
   social: {
     linkedin: process.env.NEXT_PUBLIC_LINKEDIN_URL || '',

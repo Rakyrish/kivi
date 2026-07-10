@@ -317,6 +317,31 @@ export default async function ProductDetailPage({
                   </p>
                 </div>
               )}
+
+              {/* 8. External References & Further Reading */}
+              {Array.isArray(product.external_references) && product.external_references.length > 0 && (
+                <div className="space-y-4">
+                  <h2 className="font-display font-black text-sm uppercase tracking-wider text-kivi-navy border-b border-kivi-cyan/15 pb-2">
+                    External References & Further Reading
+                  </h2>
+                  <ul className="space-y-2">
+                    {product.external_references
+                      .filter((ref) => ref?.title && ref?.url)
+                      .map((ref, index) => (
+                        <li key={index}>
+                          <a
+                            href={ref.url}
+                            target="_blank"
+                            rel={ref.nofollow ? 'nofollow noopener noreferrer' : 'noopener noreferrer'}
+                            className="text-sm text-kivi-cyan hover:text-kivi-cyan-hover underline underline-offset-2 transition-colors"
+                          >
+                            {ref.title}
+                          </a>
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              )}
             </div>
 
             {/* Specifications & Safety Sidebar */}
@@ -372,6 +397,28 @@ export default async function ProductDetailPage({
                     <p className="text-sm leading-relaxed text-[var(--paper-text)] font-sans">{faq.answer}</p>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* See Also — AI-curated cross-links to related products/categories */}
+          {Array.isArray(product.internal_links) && product.internal_links.length > 0 && (
+            <div className="bg-white border border-kivi-gray-light p-6 md:p-8 rounded-kivi shadow-card space-y-4">
+              <h2 className="font-display font-black text-lg text-kivi-navy uppercase tracking-wide">
+                See Also
+              </h2>
+              <div className="flex flex-wrap gap-3">
+                {product.internal_links
+                  .filter((link) => link?.title && link?.slug)
+                  .map((link, index) => (
+                    <Link
+                      key={index}
+                      href={`/products/${link.slug}`}
+                      className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-kivi-sm border border-kivi-gray-light text-kivi-navy hover:border-kivi-cyan hover:text-kivi-cyan transition-colors"
+                    >
+                      {link.title}
+                    </Link>
+                  ))}
               </div>
             </div>
           )}

@@ -61,13 +61,19 @@ export function localBusinessSchema() {
     url: SITE.url,
     telephone: SITE.phone || undefined,
     email: SITE.email || undefined,
-    priceRange: '$$',
     address: {
       '@type': 'PostalAddress',
       streetAddress: SITE.address || undefined,
       addressLocality: SITE.city,
       addressCountry: 'KE',
     },
+    ...(SITE.latitude && SITE.longitude && {
+      geo: {
+        '@type': 'GeoCoordinates',
+        latitude: SITE.latitude,
+        longitude: SITE.longitude,
+      },
+    }),
     ...(SITE.openingHours && { openingHours: SITE.openingHours }),
     sameAs: Object.values(SITE.social).filter(Boolean),
   }

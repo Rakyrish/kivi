@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import {
   Award, ShieldCheck, Truck, Headphones, Mail, Phone, MapPin,
   Layers, FlaskConical, Wrench, PackageCheck, MessageSquare,
@@ -119,10 +120,15 @@ export default async function HomePage() {
                     <Layers size={20} style={{ color: 'var(--kivi-cyan)' }} />
                   </div>
                   {cat.image && (
-                    <div
-                      className="mb-4 h-24 rounded-[2px] border bg-cover bg-center"
-                      style={{ backgroundImage: `url(${cat.image})`, borderColor: 'var(--border-card)' }}
-                    />
+                    <div className="relative mb-4 h-24 rounded-[2px] border overflow-hidden" style={{ borderColor: 'var(--border-card)' }}>
+                      <Image
+                        src={cat.image}
+                        alt={`${cat.name} — Kivi Chemicals`}
+                        fill
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                        className="object-cover"
+                      />
+                    </div>
                   )}
                   <h3
                     className="font-display font-bold text-sm mb-2 uppercase group-hover:text-[var(--kivi-cyan)] transition-colors"
