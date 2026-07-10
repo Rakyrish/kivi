@@ -5,7 +5,7 @@ import { Metadata } from 'next'
 import { CheckCircle, AlertTriangle, ArrowLeft } from 'lucide-react'
 import { api } from '@/lib/api'
 import { buildMetadata } from '@/lib/seo'
-import { productSchema, breadcrumbSchema } from '@/lib/schema'
+import { productSchema, breadcrumbSchema, faqSchema } from '@/lib/schema'
 import SchemaMarkup from '@/components/site/SchemaMarkup'
 import ProductCard from '@/components/site/ProductCard'
 import MolecularContextPanel from '@/components/site/MolecularContextPanel'
@@ -79,13 +79,15 @@ export default async function ProductDetailPage({
     { name: 'Products', url: `${SITE.url}/products` },
     { name: product.name, url: `${SITE.url}/products/${product.slug}` },
   ])
+  const faqs = Array.isArray(product.ai_faq) ? product.ai_faq.filter((f: any) => f?.question && f?.answer) : []
 
   return (
     <>
       <SchemaMarkup schema={prodSchemaObj} />
       <SchemaMarkup schema={breadcrumbObj} />
+      {faqs.length > 0 && <SchemaMarkup schema={faqSchema(faqs)} />}
 
-      <div className="bg-kivi-white min-h-screen py-12 text-kivi-gray font-sans">
+      <div className="bg-kivi-white min-h-screen py-12 text-[var(--paper-text)] font-sans">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10 animate-fade-in">
           {/* Back button */}
           <div>
@@ -149,19 +151,19 @@ export default async function ProductDetailPage({
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 border-t border-b border-kivi-gray-light py-4 text-xs font-mono">
                   {product.cas_number && (
                     <div className="space-y-1">
-                      <div className="text-[10px] text-kivi-mid uppercase font-sans font-bold">CAS Registry</div>
+                      <div className="text-[10px] text-[var(--paper-muted)] uppercase font-sans font-bold">CAS Registry</div>
                       <div className="text-kivi-navy font-bold">{product.cas_number}</div>
                     </div>
                   )}
                   {product.grade && (
                     <div className="space-y-1">
-                      <div className="text-[10px] text-kivi-mid uppercase font-sans font-bold">Grade standard</div>
+                      <div className="text-[10px] text-[var(--paper-muted)] uppercase font-sans font-bold">Grade standard</div>
                       <div className="text-kivi-navy font-bold">{product.grade}</div>
                     </div>
                   )}
                   {product.un_number && (
                     <div className="space-y-1">
-                      <div className="text-[10px] text-kivi-mid uppercase font-sans font-bold">UN Hazmat Tag</div>
+                      <div className="text-[10px] text-[var(--paper-muted)] uppercase font-sans font-bold">UN Hazmat Tag</div>
                       <div className="text-kivi-hazard font-bold">{product.un_number}</div>
                     </div>
                   )}
@@ -186,7 +188,7 @@ export default async function ProductDetailPage({
                 )}
 
                 {/* Short description */}
-                <p className="text-sm leading-relaxed text-kivi-gray font-sans">
+                <p className="text-sm leading-relaxed text-[var(--paper-text)] font-sans">
                   {product.short_description}
                 </p>
               </div>
@@ -200,30 +202,99 @@ export default async function ProductDetailPage({
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             {/* Description & Applications */}
             <div className="lg:col-span-8 space-y-8 bg-white border border-kivi-gray-light p-6 md:p-8 rounded-kivi shadow-card">
-              {/* Full Description */}
+              {/* 1. Product Introduction */}
+              {product.introduction && (
+                <div className="space-y-4">
+                  <h2 className="font-display font-black text-sm uppercase tracking-wider text-kivi-navy border-b border-kivi-cyan/15 pb-2">
+                    Product Introduction
+                  </h2>
+                  <p className="text-sm leading-relaxed whitespace-pre-line text-[var(--paper-text)] font-sans">
+                    {product.introduction}
+                  </p>
+                </div>
+              )}
+
+              {/* 2. Detailed Product Overview */}
               <div className="space-y-4">
                 <h2 className="font-display font-black text-sm uppercase tracking-wider text-kivi-navy border-b border-kivi-cyan/15 pb-2">
-                  Chemical Description & Properties
+                  Detailed Product Overview
                 </h2>
-                <p className="text-sm leading-relaxed whitespace-pre-line text-kivi-gray font-sans">
+                <p className="text-sm leading-relaxed whitespace-pre-line text-[var(--paper-text)] font-sans">
                   {product.description}
                 </p>
               </div>
 
-              {/* Applications */}
-              {product.applications && (Array.isArray(product.applications) ? product.applications.length > 0 : false) && (
+              {/* 3. Applications & Uses — each use case explained individually */}
+              {Array.isArray(product.applications_detailed) && product.applications_detailed.length > 0 ? (
                 <div className="space-y-4">
                   <h2 className="font-display font-black text-sm uppercase tracking-wider text-kivi-navy border-b border-kivi-cyan/15 pb-2">
-                    Primary Applications & Industry Uses
+                    Applications & Uses
                   </h2>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {Array.isArray(product.applications) && product.applications.map((app: string, index: number) => (
-                      <div key={index} className="flex items-start gap-2.5 text-xs text-kivi-gray font-sans">
-                        <CheckCircle size={16} className="text-kivi-cyan flex-shrink-0 mt-0.5" />
-                        <span>{app}</span>
+                  <div className="space-y-5">
+                    {product.applications_detailed.map((app: { title: string; description: string }, index: number) => (
+                      <div key={index} className="space-y-1.5">
+                        <h3 className="text-sm font-bold text-kivi-navy font-sans flex items-center gap-2">
+                          <CheckCircle size={15} className="text-kivi-cyan flex-shrink-0" />
+                          {app.title}
+                        </h3>
+                        <p className="text-sm leading-relaxed text-[var(--paper-text)] font-sans pl-6">
+                          {app.description}
+                        </p>
                       </div>
                     ))}
                   </div>
+                </div>
+              ) : (
+                Array.isArray(product.applications) && product.applications.length > 0 && (
+                  <div className="space-y-4">
+                    <h2 className="font-display font-black text-sm uppercase tracking-wider text-kivi-navy border-b border-kivi-cyan/15 pb-2">
+                      Primary Applications & Industry Uses
+                    </h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {product.applications.map((app: string, index: number) => (
+                        <div key={index} className="flex items-start gap-2.5 text-xs text-[var(--paper-text)] font-sans">
+                          <CheckCircle size={16} className="text-kivi-cyan flex-shrink-0 mt-0.5" />
+                          <span>{app}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              )}
+
+              {/* 4. Benefits & Advantages — paragraph form */}
+              {product.benefits_content && (
+                <div className="space-y-4">
+                  <h2 className="font-display font-black text-sm uppercase tracking-wider text-kivi-navy border-b border-kivi-cyan/15 pb-2">
+                    Benefits & Advantages
+                  </h2>
+                  <p className="text-sm leading-relaxed whitespace-pre-line text-[var(--paper-text)] font-sans">
+                    {product.benefits_content}
+                  </p>
+                </div>
+              )}
+
+              {/* 6. Packaging Information */}
+              {product.packaging_info && (
+                <div className="space-y-4">
+                  <h2 className="font-display font-black text-sm uppercase tracking-wider text-kivi-navy border-b border-kivi-cyan/15 pb-2">
+                    Packaging & Bulk Supply
+                  </h2>
+                  <p className="text-sm leading-relaxed whitespace-pre-line text-[var(--paper-text)] font-sans">
+                    {product.packaging_info}
+                  </p>
+                </div>
+              )}
+
+              {/* 7. Storage & Handling */}
+              {product.storage_handling && (
+                <div className="space-y-4">
+                  <h2 className="font-display font-black text-sm uppercase tracking-wider text-kivi-navy border-b border-kivi-cyan/15 pb-2">
+                    Storage & Handling
+                  </h2>
+                  <p className="text-sm leading-relaxed whitespace-pre-line text-[var(--paper-text)] font-sans">
+                    {product.storage_handling}
+                  </p>
                 </div>
               )}
             </div>
@@ -232,7 +303,7 @@ export default async function ProductDetailPage({
             <div className="lg:col-span-4 space-y-8">
               {/* Specs Table */}
               {product.specifications && Object.keys(product.specifications).length > 0 && (
-                <div className="bg-kivi-surface border border-kivi-cyan/15 p-6 rounded-kivi text-kivi-white shadow-glow-cyan">
+                <div className="bg-kivi-navy border border-kivi-cyan/15 p-6 rounded-kivi text-[var(--panel-text)] shadow-glow-cyan">
                   <h2 className="font-display font-black text-xs uppercase tracking-wider text-kivi-cyan border-b border-kivi-cyan/10 pb-3 mb-4">
                     Technical Specifications
                   </h2>
@@ -241,8 +312,8 @@ export default async function ProductDetailPage({
                       <tbody>
                         {Object.entries(product.specifications).map(([key, val]) => (
                           <tr key={key} className="border-b border-kivi-cyan/5 font-mono">
-                            <td className="px-4 py-2.5 font-bold text-kivi-mid">{key}</td>
-                            <td className="px-4 py-2.5 text-kivi-white text-right">{String(val)}</td>
+                            <td className="px-4 py-2.5 font-bold text-[var(--panel-muted)]">{key}</td>
+                            <td className="px-4 py-2.5 text-[var(--panel-text)] text-right">{String(val)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -267,6 +338,23 @@ export default async function ProductDetailPage({
               )}
             </div>
           </div>
+
+          {/* 9. Frequently Asked Questions */}
+          {faqs.length > 0 && (
+            <div className="bg-white border border-kivi-gray-light p-6 md:p-8 rounded-kivi shadow-card space-y-6">
+              <h2 className="font-display font-black text-lg text-kivi-navy uppercase tracking-wide">
+                Frequently Asked Questions
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6">
+                {faqs.map((faq: { question: string; answer: string }, index: number) => (
+                  <div key={index} className="space-y-1.5">
+                    <h3 className="text-sm font-bold text-kivi-navy font-sans">{faq.question}</h3>
+                    <p className="text-sm leading-relaxed text-[var(--paper-text)] font-sans">{faq.answer}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Related Products */}
           {relatedProducts.length > 0 && (

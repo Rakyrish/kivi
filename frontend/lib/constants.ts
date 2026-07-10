@@ -54,6 +54,8 @@ export const API_ENDPOINTS = {
   ai: {
     generateBlog: '/ai/generate-blog/',
     generateProduct: '/ai/generate-product/',
+    analyzeImage: '/ai/analyze-image/',
+    kiviAgent: '/ai/kivi-agent/',
   },
   leads: {
     quoteRequests: '/leads/quote-requests/',

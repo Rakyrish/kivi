@@ -1,10 +1,12 @@
 from django.http import HttpResponse
 from django.views import View
 from django.conf import settings
+from django.core.cache import cache
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import permissions
 from apps.products.models import Product
+from apps.products.quality import run_content_quality_audit
 from apps.blog.models import BlogPost
 
 
@@ -166,3 +168,28 @@ class SEOAuditView(APIView):
                 'missing_summary': posts_missing_summary,
             },
         })
+
+
+class ContentQualityAuditView(APIView):
+    """
+    Admin-only. Scans product content for writing-quality issues that a
+    field-presence SEO audit can't catch: thin sections, missing sections,
+    duplicate openings across products, generic AI phrasing, and under-use
+    of the "Kivi Chemicals" brand name. Flagged products can be re-queued
+    through POST /api/products/regenerate-bulk/ with their slugs.
+    Cached for 10 minutes — a full-text scan across the catalogue on every
+    dashboard load would be wasteful since content only changes on regeneration.
+    """
+    permission_classes = [permissions.IsAdminUser]
+    CACHE_KEY = 'content_quality_audit_v1'
+    CACHE_TTL = 600
+
+    def get(self, request):
+        if request.query_params.get('refresh') != '1':
+            cached = cache.get(self.CACHE_KEY)
+            if cached:
+                return Response(cached)
+
+        result = run_content_quality_audit()
+        cache.set(self.CACHE_KEY, result, self.CACHE_TTL)
+        return Response(result)

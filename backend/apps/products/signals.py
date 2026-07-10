@@ -7,14 +7,22 @@ from .tasks import generate_product_datasheet_task
 
 @receiver(post_save, sender=Product)
 def handle_product_save(sender, instance, created, **kwargs):
-    # Invalidate frontend caches
-    cache.clear()
-    
-    # Trigger background Celery task to generate PDF datasheet
-    generate_product_datasheet_task.delay(instance.id)
+    # A save must never fail because Redis (cache or broker) is unreachable.
+    try:
+        cache.clear()
+    except Exception:
+        pass
+
+    # Trigger background Celery task to generate PDF datasheet.
+    try:
+        generate_product_datasheet_task.delay(instance.id)
+    except Exception:
+        pass
 
 
 @receiver(post_save, sender=Category)
 def handle_category_save(sender, instance, created, **kwargs):
-    # Invalidate frontend caches
-    cache.clear()
+    try:
+        cache.clear()
+    except Exception:
+        pass

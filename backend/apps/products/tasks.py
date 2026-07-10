@@ -71,6 +71,75 @@ class NumberedCanvas(canvas.Canvas):
         self.restoreState()
 
 
+def regenerate_product_content(product_id):
+    """
+    Rewrites a product's content in place with the full 10-section generation engine.
+
+    URL preservation guarantees: slug, image(s), category, documents, inventory,
+    and analytics counters are never touched. Only content and SEO metadata change.
+    The post_save signal then refreshes the TDS PDF automatically.
+
+    Raises on generation failure (the Celery wrapper retries; sync callers surface it).
+    """
+    from apps.ai_generator.generation import generate_product_content, CONTENT_FIELDS, IDENTITY_FIELDS
+    from apps.analytics.utils import log_ai_action
+
+    try:
+        product = Product.objects.select_related('category').get(id=product_id)
+    except Product.DoesNotExist:
+        return f"Product {product_id} not found."
+
+    existing = {
+        'name': product.name,
+        'category': product.category.name if product.category else '',
+        'chemical_formula': product.chemical_formula,
+        'cas_number': product.cas_number,
+        'un_number': product.un_number,
+        'grade': product.grade,
+        'purity': product.purity,
+        'molecular_weight': product.molecular_weight,
+        'appearance': product.appearance,
+        'applications': product.applications,
+        'specifications': product.specifications,
+        'packaging': product.packaging,
+        'short_description': product.short_description,
+    }
+
+    try:
+        content, tokens = generate_product_content(
+            product_name=product.name,
+            category=existing['category'],
+            image_url=product.image or None,
+            existing=existing,
+        )
+    except Exception as e:
+        log_ai_action("product_text", product.name, "error", 0, str(e), triggered_by="regeneration")
+        raise
+
+    original_slug = product.slug
+    for field in CONTENT_FIELDS:
+        setattr(product, field, content[field])
+    # Identity facts: only fill blanks — never overwrite verified chemistry data.
+    for field in IDENTITY_FIELDS:
+        if not getattr(product, field):
+            setattr(product, field, content[field])
+
+    product.ai_generated = True
+    product.slug = original_slug  # URL is permanent
+    product.save()
+
+    log_ai_action("product_text", product.name, "success", tokens, triggered_by="regeneration")
+    return f"Regenerated content for '{product.name}' (slug preserved: {original_slug})"
+
+
+@shared_task(name="apps.products.tasks.regenerate_product_content_task", bind=True, max_retries=2, default_retry_delay=120)
+def regenerate_product_content_task(self, product_id):
+    try:
+        return regenerate_product_content(product_id)
+    except Exception as e:
+        raise self.retry(exc=e)
+
+
 @shared_task(name="apps.products.tasks.generate_product_datasheet_task")
 def generate_product_datasheet_task(product_id):
     try:

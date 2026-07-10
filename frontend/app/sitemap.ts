@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next'
 import { api } from '@/lib/api'
 import { SITE } from '@/lib/constants'
-import type { Product, BlogPost } from '@/types'
+import type { Product, BlogPost, Category } from '@/types'
 
 async function getAllProducts(): Promise<Product[]> {
   const all: Product[] = []
@@ -31,6 +31,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     posts = (await api.getBlogPosts()).filter((p) => p.is_published !== false)
   } catch {}
 
+  let categories: Category[] = []
+  try {
+    categories = await api.getCategories()
+  } catch {}
+
   const routes: MetadataRoute.Sitemap = [
     { url: `${base}`, changeFrequency: 'weekly', priority: 1.0 },
     { url: `${base}/products`, changeFrequency: 'daily', priority: 0.9 },
@@ -44,6 +49,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     lastModified: p.updated_at ? new Date(p.updated_at) : undefined,
     changeFrequency: 'weekly',
     priority: 0.85,
+    // Image sitemap entries — helps Google Images index product photos
+    ...(p.image ? { images: [p.image] } : {}),
+  }))
+
+  const categoryRoutes: MetadataRoute.Sitemap = categories.map((c) => ({
+    url: `${base}/categories/${c.slug}`,
+    changeFrequency: 'weekly',
+    priority: 0.8,
+    ...(c.image ? { images: [c.image] } : {}),
   }))
 
   const postRoutes: MetadataRoute.Sitemap = posts.map((b) => ({
@@ -53,5 +67,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }))
 
-  return [...routes, ...productRoutes, ...postRoutes]
+  return [...routes, ...categoryRoutes, ...productRoutes, ...postRoutes]
 }

@@ -38,7 +38,7 @@ export default function EditProductPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64 text-[#00A0C0]">
+      <div className="flex items-center justify-center h-64" style={{ color: 'var(--kivi-cyan)' }}>
         <Loader2 size={24} className="animate-spin mr-3" />
         <span className="text-xs uppercase font-bold tracking-wider">Loading product...</span>
       </div>
@@ -47,7 +47,7 @@ export default function EditProductPage() {
 
   if (error || !product) {
     return (
-      <div className="text-center py-16 text-red-400 text-xs">{error || 'Product not found.'}</div>
+      <div className="text-center py-16 text-xs" style={{ color: 'var(--kivi-error)' }}>{error || 'Product not found.'}</div>
     )
   }
 
@@ -55,10 +55,10 @@ export default function EditProductPage() {
     <div className="space-y-8 max-w-5xl">
       {/* Header */}
       <div>
-        <h1 className="font-display font-black text-2xl text-[#F4F7FA] uppercase tracking-wide">
+        <h1 className="font-display font-black text-2xl uppercase tracking-wide" style={{ color: 'var(--text-primary)' }}>
           Edit Product
         </h1>
-        <p className="text-xs text-[#606060] mt-1 font-mono">/{slug}</p>
+        <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>/{slug}</p>
       </div>
 
       {/* AI Re-generate Panel */}

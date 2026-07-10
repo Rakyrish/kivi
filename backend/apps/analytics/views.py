@@ -12,11 +12,13 @@ from apps.products.models import Product, Category, SiteSetting
 from apps.blog.models import BlogPost
 from apps.contacts.models import ContactSubmission
 from apps.leads.models import QuoteRequest, Lead
-from .models import PageView, ProductView, AIGenerationLog, SystemError, SearchQueryLog, PerformanceMetric
+from .models import PageView, ProductView, AIGenerationLog, SystemError, SearchQueryLog, PerformanceMetric, ChatMessage
 from .serializers import (
     PageViewSerializer, ProductViewSerializer, AIGenerationLogSerializer,
     SystemErrorSerializer, SearchQueryLogSerializer, PerformanceMetricSerializer
 )
+from .search_console import fetch_search_analytics
+from .tasks import run_pagespeed_audit
 import cloudinary
 import cloudinary.api
 
@@ -152,45 +154,37 @@ class DashboardMetricsView(APIView):
         except Exception:
             health['cloudinary'] = 'unhealthy'
 
-        # 7. Search Queries (real analytics from SearchQueryLog)
-        top_searches = SearchQueryLog.objects.values('query').annotate(
-            clicks=Count('id'),
-            avg_results=Sum('results_count') / Count('id')
-        ).order_by('-clicks')[:5]
-        
-        top_searches_list = [
-            {
-                'query': s['query'],
-                'clicks': s['clicks'],
-                'impressions': int(s['clicks'] * 3.5),
-                'results_count': int(s['avg_results'])
-            } for s in top_searches
-        ]
-        
-        if not top_searches_list:
-            top_searches_list = [
-                {'query': 'industrial chemicals Kenya', 'clicks': 234, 'impressions': 1200, 'results_count': 10},
-                {'query': 'water treatment chemicals Nairobi', 'clicks': 142, 'impressions': 890, 'results_count': 6},
-                {'query': 'buy solvents East Africa', 'clicks': 98, 'impressions': 650, 'results_count': 4},
-                {'query': 'purity grade Sodium Hydroxide', 'clicks': 87, 'impressions': 430, 'results_count': 2},
-                {'query': 'Kivi chemicals', 'clicks': 65, 'impressions': 310, 'results_count': 15},
-            ]
-
-        # 8. Performance Metrics (real Lighthouse audits)
-        perf_metric = PerformanceMetric.objects.first()
-        if not perf_metric:
-            performance_data = {
-                'performance_score': 95,
-                'seo_score': 98,
-                'accessibility_score': 92,
-                'best_practices_score': 96,
-                'lcp': 1.2,
-                'cls': 0.05,
-                'inp': 0.15,
-                'fcp': 0.8,
-                'ttfb': 0.2
-            }
+        # 7. Search analytics — live Google Search Console when configured,
+        # otherwise the site's own internal search logs. Never fabricated.
+        gsc_data = fetch_search_analytics()
+        if gsc_data:
+            search_analytics = {**gsc_data, 'source': 'search_console'}
         else:
+            top_searches = SearchQueryLog.objects.values('query').annotate(
+                searches=Count('id'),
+                avg_results=Sum('results_count') / Count('id')
+            ).order_by('-searches')[:10]
+            search_analytics = {
+                'clicks': sum(s['searches'] for s in top_searches),
+                'impressions': None,
+                'ctr': None,
+                'average_position': None,
+                'top_queries': [
+                    {
+                        'query': s['query'],
+                        'clicks': s['searches'],
+                        'impressions': None,
+                        'results_count': int(s['avg_results'] or 0),
+                    } for s in top_searches
+                ],
+                'source': 'internal_search',
+            }
+
+        # 8. Performance Metrics (real Lighthouse audits via PageSpeed Insights).
+        # None until the first audit runs — the dashboard offers a manual trigger.
+        perf_metric = PerformanceMetric.objects.first()
+        performance_data = None
+        if perf_metric:
             performance_data = {
                 'performance_score': perf_metric.performance_score,
                 'seo_score': perf_metric.seo_score,
@@ -200,7 +194,11 @@ class DashboardMetricsView(APIView):
                 'cls': perf_metric.cls,
                 'inp': perf_metric.inp,
                 'fcp': perf_metric.fcp,
-                'ttfb': perf_metric.ttfb
+                'ttfb': perf_metric.ttfb,
+                'url': perf_metric.url,
+                'strategy': perf_metric.strategy,
+                'recommendations': perf_metric.recommendations,
+                'audited_at': perf_metric.created_at,
             }
 
         return Response({
@@ -219,17 +217,24 @@ class DashboardMetricsView(APIView):
                 'countries': list(countries),
             },
             'ai_stats': ai_stats,
+            'chatbot': self._get_chatbot_stats(thirty_days_ago),
             'health': health,
-            'google_search_console': {
-                'clicks': sum(s['clicks'] for s in top_searches_list),
-                'impressions': sum(s['impressions'] for s in top_searches_list),
-                'average_position': 12.4,
-                'top_queries': top_searches_list
-            },
+            'google_search_console': search_analytics,
             'lighthouse': performance_data,
             'inventory': self._get_inventory_stats(),
             'security': self._get_security_stats(),
         })
+
+    def _get_chatbot_stats(self, since):
+        """Kivi Agent usage stats for the dashboard, from real chat logs."""
+        recent = ChatMessage.objects.filter(created_at__gte=since)
+        return {
+            'total_messages': ChatMessage.objects.count(),
+            'messages_30d': recent.count(),
+            'sessions_30d': recent.values('session_id').distinct().count(),
+            'escalations_30d': recent.filter(escalated=True).count(),
+            'tokens_30d': recent.aggregate(total=Sum('tokens_used'))['total'] or 0,
+        }
 
     def _get_inventory_stats(self):
         """Real inventory stats calculated from DB product stock."""
@@ -293,4 +298,20 @@ class PerformanceMetricViewSet(viewsets.ModelViewSet):
     queryset = PerformanceMetric.objects.all()
     serializer_class = PerformanceMetricSerializer
     permission_classes = [permissions.IsAdminUser]
+
+    @action(detail=False, methods=['post'], url_path='run-audit')
+    def run_audit(self, request):
+        """Queue a real Lighthouse audit via PageSpeed Insights (sync fallback if broker is down)."""
+        strategy = request.data.get('strategy', 'mobile')
+        if strategy not in ('mobile', 'desktop'):
+            return Response({'error': "strategy must be 'mobile' or 'desktop'"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            run_pagespeed_audit.delay(strategy=strategy)
+            return Response({'status': 'queued', 'strategy': strategy})
+        except Exception:
+            result = run_pagespeed_audit(strategy=strategy)
+            if result.get('status') == 'success':
+                return Response({'status': 'completed', **result})
+            return Response(result, status=status.HTTP_502_BAD_GATEWAY)
 

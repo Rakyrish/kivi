@@ -6,7 +6,7 @@ from django.conf import settings
 from django.utils import timezone
 from django.utils.text import slugify
 from apps.products.models import SiteSetting
-from apps.analytics.views import log_ai_action
+from apps.analytics.utils import log_ai_action
 from .models import BlogPost, BlogCategory
 
 
