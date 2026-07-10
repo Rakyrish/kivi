@@ -106,7 +106,7 @@ export default async function HomePage() {
             {categories.map((cat) => (
               <Link
                 key={cat.id}
-                href={`/products?category=${cat.slug}`}
+                href={`/categories/${cat.slug}`}
                 className="group border rounded-[4px] p-6 text-left transition-all duration-300 flex flex-col h-full justify-between"
                 style={{
                   background: 'var(--bg-card)',

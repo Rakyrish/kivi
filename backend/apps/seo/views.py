@@ -5,7 +5,7 @@ from django.core.cache import cache
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import permissions
-from apps.products.models import Product
+from apps.products.models import Product, Category
 from apps.products.quality import run_content_quality_audit
 from apps.blog.models import BlogPost
 
@@ -14,6 +14,7 @@ class SitemapView(View):
     def get(self, request):
         base = getattr(settings, 'SITE_URL', 'https://kivichemicals.com')
         products = Product.objects.filter(is_active=True).values('slug', 'updated_at')
+        categories = Category.objects.filter(is_active=True).values('slug')
         posts = BlogPost.objects.filter(is_published=True).values('slug', 'updated_at')
 
         lines = ['<?xml version="1.0" encoding="UTF-8"?>',
@@ -22,6 +23,7 @@ class SitemapView(View):
         for path, priority, freq in [
             ('', '1.0', 'weekly'),
             ('/products', '0.9', 'daily'),
+            ('/categories', '0.8', 'weekly'),
             ('/about', '0.7', 'monthly'),
             ('/contact', '0.7', 'monthly'),
             ('/blog', '0.8', 'weekly'),
@@ -30,6 +32,10 @@ class SitemapView(View):
                       f'<changefreq>{freq}</changefreq>'
                       f'<priority>{priority}</priority></url>']
 
+        for c in categories:
+            lines += [f'<url><loc>{base}/categories/{c["slug"]}</loc>'
+                      f'<changefreq>weekly</changefreq><priority>0.8</priority></url>']
+
         for p in products:
             lines += [f'<url><loc>{base}/products/{p["slug"]}</loc>'
                       f'<lastmod>{p["updated_at"].date()}</lastmod>'
@@ -37,6 +43,7 @@ class SitemapView(View):
 
         # /products?category=… URLs are intentionally excluded: they canonicalise
         # to /products, and sitemaps should only list canonical URLs.
+        # /categories/<slug> are the canonical category landing pages, listed above.
 
         for b in posts:
             lines += [f'<url><loc>{base}/blog/{b["slug"]}</loc>'
@@ -56,7 +63,6 @@ Disallow: /admin
 Disallow: /admin/
 Disallow: /django-admin/
 Disallow: /api/
-Disallow: /_next/
 
 Sitemap: {base}/sitemap.xml
 """

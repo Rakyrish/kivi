@@ -30,6 +30,7 @@ export const INTERNAL_API_URL = process.env.INTERNAL_API_URL || API_URL
 export const ROUTES = {
   home: '/',
   products: '/products',
+  categories: '/categories',
   blog: '/blog',
   about: '/about',
   contact: '/contact',

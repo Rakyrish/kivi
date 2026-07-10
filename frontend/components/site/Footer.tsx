@@ -71,7 +71,7 @@ export default function Footer() {
                 <Link href={ROUTES.products} className="hover:text-[#00A0C0] transition-colors">Product Catalogue</Link>
               </li>
               <li>
-                <Link href={`${ROUTES.products}#categories`} className="hover:text-[#00A0C0] transition-colors">Chemical Categories</Link>
+                <Link href={ROUTES.categories} className="hover:text-[#00A0C0] transition-colors">Chemical Categories</Link>
               </li>
               <li>
                 <Link href={ROUTES.blog} className="hover:text-[#00A0C0] transition-colors">Kivi Insights</Link>

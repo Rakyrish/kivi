@@ -111,7 +111,7 @@ export default function GlobalSearch() {
                 {results.categories.map((category) => (
                   <SearchLink
                     key={category.id}
-                    href={`${ROUTES.products}?category=${category.slug}`}
+                    href={`${ROUTES.categories}/${category.slug}`}
                     label={category.name}
                     meta={`${category.product_count || 0} products`}
                     onClick={() => setIsOpen(false)}

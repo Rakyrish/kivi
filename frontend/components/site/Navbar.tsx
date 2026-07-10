@@ -171,7 +171,7 @@ export default function Navbar() {
                                 return (
                                   <Link
                                     key={cat.id}
-                                    href={`${ROUTES.products}?category=${cat.slug}`}
+                                    href={`${ROUTES.categories}/${cat.slug}`}
                                     className="flex items-center gap-2.5 px-3 py-2 rounded-[2px] text-sm transition-colors group/cat"
                                     style={{ color: 'var(--text-secondary)' }}
                                   >
@@ -311,7 +311,7 @@ export default function Navbar() {
                           return (
                             <Link
                               key={cat.id}
-                              href={`${ROUTES.products}?category=${cat.slug}`}
+                              href={`${ROUTES.categories}/${cat.slug}`}
                               onClick={() => setMobileOpen(false)}
                               className="flex items-center gap-2 px-2 py-2 text-sm rounded-[2px] transition-colors"
                               style={{ color: 'var(--text-secondary)' }}
