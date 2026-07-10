@@ -23,11 +23,20 @@ async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T
   const baseUrl = getApiUrl()
   const url = `${baseUrl}${path}`
 
-  // Extract token from cookie (client-side only)
+  // Extract admin token from cookie: client-side via document.cookie,
+  // server-side (Server Components/route handlers) via next/headers
   let token = ''
   if (typeof window !== 'undefined') {
     const match = document.cookie.match(/(?:^|; )admin_token=([^;]*)/)
     token = match ? decodeURIComponent(match[1]) : ''
+  } else {
+    try {
+      const { cookies } = await import('next/headers')
+      const cookieStore = await cookies()
+      token = cookieStore.get('admin_token')?.value || ''
+    } catch (_) {
+      // Not in a request context (e.g. build-time static generation) - no token available
+    }
   }
 
   const headers = new Headers(options.headers)

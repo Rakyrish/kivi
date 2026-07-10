@@ -62,8 +62,9 @@ class ProductViewSet(viewsets.ModelViewSet):
         return [permissions.IsAdminUser()]
 
     def list(self, request, *args, **kwargs):
+        is_admin = bool(request.user and request.user.is_staff)
         query_params = request.query_params.urlencode()
-        cache_key = f'product_list_{query_params}'
+        cache_key = f'product_list_admin_{is_admin}_{query_params}'
         data = cache.get(cache_key)
 
         if not data:

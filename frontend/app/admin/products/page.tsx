@@ -7,11 +7,15 @@ import type { Product } from '@/types'
 
 export default async function AdminProductsPage() {
   let products: Product[] = []
+  let error: string | null = null
 
   try {
     const res = await api.getProducts({ page_size: 200 })
     products = res.results || []
-  } catch (_) {}
+  } catch (err) {
+    error = err instanceof Error ? err.message : 'Failed to load products'
+    console.error('AdminProductsPage: failed to load products', err)
+  }
 
   return (
     <div className="space-y-8">
@@ -30,6 +34,12 @@ export default async function AdminProductsPage() {
           Add Product
         </Link>
       </div>
+
+      {error && (
+        <div className="px-4 py-3 text-xs rounded-[2px]" style={{ background: 'rgba(220,38,38,0.1)', color: '#dc2626' }}>
+          Could not load products: {error}
+        </div>
+      )}
 
       <ProductsTable products={products} />
     </div>
