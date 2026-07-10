@@ -7,6 +7,7 @@ import { api } from '@/lib/api'
 import { buildMetadata } from '@/lib/seo'
 import { productSchema, breadcrumbSchema, faqSchema } from '@/lib/schema'
 import SchemaMarkup from '@/components/site/SchemaMarkup'
+import Breadcrumbs from '@/components/site/Breadcrumbs'
 import ProductCard from '@/components/site/ProductCard'
 import MolecularContextPanel from '@/components/site/MolecularContextPanel'
 import DatasheetDownloader from '@/components/site/DatasheetDownloader'
@@ -90,11 +91,12 @@ export default async function ProductDetailPage({
 
   // Schema structured markup
   const prodSchemaObj = productSchema(product)
-  const breadcrumbObj = breadcrumbSchema([
+  const breadcrumbItems = [
     { name: 'Home', url: SITE.url },
     { name: 'Products', url: `${SITE.url}/products` },
     { name: product.name, url: `${SITE.url}/products/${product.slug}` },
-  ])
+  ]
+  const breadcrumbObj = breadcrumbSchema(breadcrumbItems)
   const faqs = Array.isArray(product.ai_faq) ? product.ai_faq.filter((f: any) => f?.question && f?.answer) : []
 
   return (
@@ -105,6 +107,8 @@ export default async function ProductDetailPage({
 
       <div className="bg-kivi-white min-h-screen py-12 text-[var(--paper-text)] font-sans">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10 animate-fade-in">
+          <Breadcrumbs items={breadcrumbItems} />
+
           {/* Back button */}
           <div>
             <Link

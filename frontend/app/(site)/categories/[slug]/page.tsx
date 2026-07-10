@@ -6,6 +6,7 @@ import { api } from '@/lib/api'
 import { buildMetadata } from '@/lib/seo'
 import { breadcrumbSchema, faqSchema } from '@/lib/schema'
 import SchemaMarkup from '@/components/site/SchemaMarkup'
+import Breadcrumbs from '@/components/site/Breadcrumbs'
 import ProductCard from '@/components/site/ProductCard'
 import { SITE } from '@/lib/constants'
 import type { Category, Product } from '@/types'
@@ -63,11 +64,12 @@ export default async function CategoryAuthorityPage({
     products = res.results || []
   } catch {}
 
-  const breadcrumbObj = breadcrumbSchema([
+  const breadcrumbItems = [
     { name: 'Home', url: SITE.url },
-    { name: 'Products', url: `${SITE.url}/products` },
+    { name: 'Categories', url: `${SITE.url}/categories` },
     { name: category.name, url: `${SITE.url}/categories/${category.slug}` },
-  ])
+  ]
+  const breadcrumbObj = breadcrumbSchema(breadcrumbItems)
   const faqs = Array.isArray(category.faq)
     ? category.faq.filter((f) => f?.question && f?.answer)
     : []
@@ -79,6 +81,8 @@ export default async function CategoryAuthorityPage({
 
       <div className="bg-kivi-white min-h-screen py-12 text-kivi-gray font-sans">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10 animate-fade-in">
+          <Breadcrumbs items={breadcrumbItems} />
+
           {/* Header */}
           <div className="space-y-4 max-w-3xl">
             <span className="text-xs uppercase font-bold tracking-widest text-kivi-cyan">

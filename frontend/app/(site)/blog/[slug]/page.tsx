@@ -7,6 +7,7 @@ import { api } from '@/lib/api'
 import { buildMetadata } from '@/lib/seo'
 import { articleSchema, breadcrumbSchema } from '@/lib/schema'
 import SchemaMarkup from '@/components/site/SchemaMarkup'
+import Breadcrumbs from '@/components/site/Breadcrumbs'
 import { SITE } from '@/lib/constants'
 
 export const revalidate = 3600 // ISR
@@ -57,18 +58,19 @@ export default async function BlogPostDetailPage({
   if (!post) notFound()
 
   const publishedDate = post.published_at || post.created_at
+  const breadcrumbItems = [
+    { name: 'Home', url: SITE.url },
+    { name: 'Blog', url: `${SITE.url}/blog` },
+    { name: post.title, url: `${SITE.url}/blog/${post.slug}` },
+  ]
 
   return (
     <div className="bg-[#F4F7FA] min-h-screen py-12 text-[#606060]">
       <SchemaMarkup schema={articleSchema(post)} />
-      <SchemaMarkup
-        schema={breadcrumbSchema([
-          { name: 'Home', url: SITE.url },
-          { name: 'Blog', url: `${SITE.url}/blog` },
-          { name: post.title, url: `${SITE.url}/blog/${post.slug}` },
-        ])}
-      />
+      <SchemaMarkup schema={breadcrumbSchema(breadcrumbItems)} />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+        <Breadcrumbs items={breadcrumbItems} />
+
         {/* Back Link */}
         <div>
           <Link
