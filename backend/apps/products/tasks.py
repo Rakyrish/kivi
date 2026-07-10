@@ -109,7 +109,7 @@ def regenerate_product_content(product_id):
         content, tokens = generate_product_content(
             product_name=product.name,
             category=existing['category'],
-            image_url=product.image or None,
+            image_url_list=product.images or ([product.image] if product.image else None),
             existing=existing,
         )
     except Exception as e:

@@ -12,6 +12,7 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework import status
 from apps.analytics.models import ChatMessage
 from apps.analytics.utils import log_ai_action
+from apps.products.media import rehost_image_urls
 from .analyze_vision import analyze_product_image_vision
 
 
@@ -151,7 +152,11 @@ class AnalyzeProductImageView(APIView):
                 cloudinary_urls = _slugify_cloudinary_images(
                     cloudinary_public_ids, cloudinary_urls, extraction.get('product_name', '')
                 )
-                all_image_urls = cloudinary_urls + image_urls
+            # Re-host any externally pasted URLs onto our own Cloudinary too, so
+            # the product never ends up hotlinking a third-party domain.
+            if image_urls:
+                image_urls = rehost_image_urls(image_urls, extraction.get('product_name', ''))
+            all_image_urls = cloudinary_urls + image_urls
             # Attach the Cloudinary-hosted URLs to the extraction so the
             # frontend can bind them straight into the product form.
             if not extraction.get('image'):
@@ -226,8 +231,12 @@ class GenerateProductContentView(APIView):
         known_name = product_name or (vision_data.get('product_name') if vision_data else '')
         if cloudinary_public_ids and known_name:
             cloudinary_urls = _slugify_cloudinary_images(cloudinary_public_ids, cloudinary_urls, known_name)
-            all_image_urls = cloudinary_urls + image_urls
             cloudinary_public_ids = []  # already renamed, don't redo below
+        # Re-host any externally pasted URLs onto our own Cloudinary too, so the
+        # product never ends up hotlinking a third-party domain.
+        if known_name and image_urls:
+            image_urls = rehost_image_urls(image_urls, known_name)
+        all_image_urls = cloudinary_urls + image_urls
 
         # If vision_data already contains image URLs (from Stage 1), honour them
         if vision_data and not vision_data.get('image') and all_image_urls:
@@ -248,7 +257,9 @@ class GenerateProductContentView(APIView):
                     cloudinary_urls = _slugify_cloudinary_images(
                         cloudinary_public_ids, cloudinary_urls, vision_data.get('product_name', '')
                     )
-                    all_image_urls = cloudinary_urls + image_urls
+                if image_urls:
+                    image_urls = rehost_image_urls(image_urls, vision_data.get('product_name', ''))
+                all_image_urls = cloudinary_urls + image_urls
                 # Attach Cloudinary URLs to freshly-extracted vision data
                 if not vision_data.get('image') and all_image_urls:
                     vision_data['image'] = all_image_urls[0]
@@ -267,13 +278,16 @@ class GenerateProductContentView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Safety net: any upload not yet renamed above (e.g. vision_data was
-        # supplied alongside freshly-uploaded files) still gets a slug.
-        if cloudinary_public_ids:
-            cloudinary_urls = _slugify_cloudinary_images(
-                cloudinary_public_ids, cloudinary_urls,
-                product_name or (vision_data.get('product_name') if vision_data else '')
-            )
+        # Safety net: any upload/URL not yet renamed or re-hosted above (e.g.
+        # vision_data was supplied alongside freshly-uploaded files, or the
+        # product name only became known this late) still gets handled.
+        final_name = product_name or (vision_data.get('product_name') if vision_data else '')
+        if cloudinary_public_ids or image_urls:
+            if cloudinary_public_ids:
+                cloudinary_urls = _slugify_cloudinary_images(
+                    cloudinary_public_ids, cloudinary_urls, final_name
+                )
+            image_urls = rehost_image_urls(image_urls, final_name)
             all_image_urls = cloudinary_urls + image_urls
             if vision_data and all_image_urls:
                 vision_data['image'] = all_image_urls[0]

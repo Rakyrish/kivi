@@ -3,6 +3,26 @@ from django.utils.text import slugify
 from django.core.validators import MinValueValidator, MaxValueValidator
 
 
+def _unique_slug(instance, name):
+    """
+    Slugifies `name` and truncates it to the instance's `slug` field max_length
+    (SlugField defaults to 50, and AI-generated names routinely produce longer
+    slugs than that, which previously caused a DB-level DataError on save).
+    Appends a numeric suffix on collision so uniqueness is preserved even after
+    truncation shortens two different names down to the same prefix.
+    """
+    max_len = instance._meta.get_field('slug').max_length
+    base_slug = slugify(name)[:max_len] or 'item'
+    ModelClass = type(instance)
+    slug = base_slug
+    counter = 1
+    while ModelClass.objects.filter(slug=slug).exclude(pk=instance.pk).exists():
+        suffix = f'-{counter}'
+        slug = f'{base_slug[:max_len - len(suffix)]}{suffix}'
+        counter += 1
+    return slug
+
+
 class Category(models.Model):
     name = models.CharField(max_length=100)
     slug = models.SlugField(unique=True, blank=True)
@@ -46,7 +66,7 @@ class Category(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = slugify(self.name)
+            self.slug = _unique_slug(self, self.name)
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -183,8 +203,8 @@ class Product(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = slugify(self.name)
-        
+            self.slug = _unique_slug(self, self.name)
+
         # Update product status based on stock level if not discontinued
         if self.product_status != 'discontinued':
             if self.current_stock <= 0:

@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import Category, Product, SiteSetting, SavedProduct, TechnicalDataSheet, StockMovementLog
+from .media import rehost_image_url, rehost_image_urls
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -25,10 +26,25 @@ class ProductSerializer(serializers.ModelSerializer):
         model = Product
         fields = '__all__'
 
+    def create(self, validated_data):
+        # Any pasted/external image URL is re-hosted onto our own Cloudinary
+        # account so the product never hotlinks a third-party domain.
+        name_hint = validated_data.get('name', '')
+        if validated_data.get('image'):
+            validated_data['image'] = rehost_image_url(validated_data['image'], name_hint)
+        if validated_data.get('images'):
+            validated_data['images'] = rehost_image_urls(validated_data['images'], name_hint)
+        return super().create(validated_data)
+
     def update(self, instance, validated_data):
         # URL preservation: a product's slug is permanent once created.
         # Content regeneration and admin edits must never move the page.
         validated_data.pop('slug', None)
+        name_hint = validated_data.get('name') or instance.name
+        if validated_data.get('image'):
+            validated_data['image'] = rehost_image_url(validated_data['image'], name_hint)
+        if validated_data.get('images'):
+            validated_data['images'] = rehost_image_urls(validated_data['images'], name_hint)
         return super().update(instance, validated_data)
 
 
