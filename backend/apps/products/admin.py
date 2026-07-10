@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Category, Product, SiteSetting, SavedProduct, TechnicalDataSheet, StockMovementLog
+from .models import Category, Product, SiteSetting, SavedProduct, TechnicalDataSheet, StockMovementLog, SlugRedirect
 
 
 @admin.register(Category)
@@ -51,4 +51,11 @@ class StockMovementLogAdmin(admin.ModelAdmin):
     list_display = ('product', 'movement_type', 'quantity', 'reference', 'created_at')
     list_filter = ('movement_type', 'created_at')
     search_fields = ('product__name', 'reference')
+
+
+@admin.register(SlugRedirect)
+class SlugRedirectAdmin(admin.ModelAdmin):
+    list_display = ('old_slug', 'product', 'created_at')
+    search_fields = ('old_slug', 'product__name')
+    readonly_fields = ('old_slug', 'product', 'created_at')
 

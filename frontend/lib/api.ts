@@ -93,6 +93,10 @@ export const api = {
     return apiRequest<{ slug: string }[]>(`/products/slugs/`)
   },
 
+  async resolveSlugRedirect(oldSlug: string): Promise<{ new_slug: string | null }> {
+    return apiRequest<{ new_slug: string | null }>(`/products/resolve-slug/?slug=${encodeURIComponent(oldSlug)}`)
+  },
+
   async getFeaturedProducts(): Promise<Product[]> {
     return apiRequest<Product[]>(`/products/featured/`)
   },

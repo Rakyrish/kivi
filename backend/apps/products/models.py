@@ -3,29 +3,43 @@ from django.utils.text import slugify
 from django.core.validators import MinValueValidator, MaxValueValidator
 
 
+def _truncate_at_word_boundary(slug, max_len):
+    """
+    Cuts `slug` to at most max_len characters without splitting a word in half
+    (e.g. never turns "...kenya-uganda-tanzania" into "...kenya-uganda-tanzani").
+    """
+    if len(slug) <= max_len:
+        return slug
+    truncated = slug[:max_len]
+    if '-' in truncated:
+        truncated = truncated.rsplit('-', 1)[0]
+    return truncated
+
+
 def _unique_slug(instance, name):
     """
     Slugifies `name` and truncates it to the instance's `slug` field max_length
-    (SlugField defaults to 50, and AI-generated names routinely produce longer
-    slugs than that, which previously caused a DB-level DataError on save).
-    Appends a numeric suffix on collision so uniqueness is preserved even after
-    truncation shortens two different names down to the same prefix.
+    (AI-generated names routinely produce longer slugs than that, which
+    previously caused a DB-level DataError on save). Truncation always lands on
+    a word boundary — see _truncate_at_word_boundary — and a numeric suffix is
+    appended on collision so uniqueness is preserved even after truncation
+    shortens two different names down to the same prefix.
     """
     max_len = instance._meta.get_field('slug').max_length
-    base_slug = slugify(name)[:max_len] or 'item'
+    base_slug = _truncate_at_word_boundary(slugify(name), max_len) or 'item'
     ModelClass = type(instance)
     slug = base_slug
     counter = 1
     while ModelClass.objects.filter(slug=slug).exclude(pk=instance.pk).exists():
         suffix = f'-{counter}'
-        slug = f'{base_slug[:max_len - len(suffix)]}{suffix}'
+        slug = f'{_truncate_at_word_boundary(base_slug, max_len - len(suffix))}{suffix}'
         counter += 1
     return slug
 
 
 class Category(models.Model):
     name = models.CharField(max_length=100)
-    slug = models.SlugField(unique=True, blank=True)
+    slug = models.SlugField(unique=True, blank=True, max_length=120)
     description = models.TextField(blank=True)
 
     # SEO
@@ -76,7 +90,7 @@ class Category(models.Model):
 class Product(models.Model):
     # ── Identity ──
     name = models.CharField(max_length=200)
-    slug = models.SlugField(unique=True, blank=True)
+    slug = models.SlugField(unique=True, blank=True, max_length=180)
     category = models.ForeignKey(
         Category, on_delete=models.SET_NULL,
         null=True, blank=True, related_name='products'
@@ -286,6 +300,21 @@ class SiteSetting(models.Model):
 
     def __str__(self):
         return self.company_name or "Site Setting"
+
+
+class SlugRedirect(models.Model):
+    """
+    Records a product's previous slug after a one-off correction (e.g. the
+    mid-word truncation bug fixed in _unique_slug) so links, bookmarks, and
+    already-indexed search engine URLs 301-redirect to the new slug instead
+    of 404ing and losing accumulated ranking signal.
+    """
+    old_slug = models.SlugField(unique=True, max_length=200)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='old_slugs')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.old_slug} -> {self.product.slug}"
 
 
 class SavedProduct(models.Model):

@@ -4,7 +4,7 @@ from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .models import Category, Product, SiteSetting, SavedProduct, TechnicalDataSheet, StockMovementLog
+from .models import Category, Product, SiteSetting, SavedProduct, TechnicalDataSheet, StockMovementLog, SlugRedirect
 from .serializers import CategorySerializer, ProductSerializer, SiteSettingSerializer, SavedProductSerializer, TechnicalDataSheetSerializer, StockMovementLogSerializer
 import cloudinary.uploader
 
@@ -57,7 +57,7 @@ class ProductViewSet(viewsets.ModelViewSet):
         return Product.objects.filter(is_active=True).select_related('category')
 
     def get_permissions(self):
-        if self.action in ['list', 'retrieve', 'slugs', 'featured']:
+        if self.action in ['list', 'retrieve', 'slugs', 'featured', 'resolve_slug']:
             return [permissions.AllowAny()]
         return [permissions.IsAdminUser()]
 
@@ -127,6 +127,18 @@ class ProductViewSet(viewsets.ModelViewSet):
         featured_products = Product.objects.filter(is_active=True, is_featured=True)[:4]
         serializer = self.get_serializer(featured_products, many=True)
         return Response(serializer.data)
+
+    @action(detail=False, methods=['get'], url_path='resolve-slug')
+    def resolve_slug(self, request):
+        """
+        Looks up an old, no-longer-valid product slug (e.g. one corrected by the
+        fix_truncated_slugs management command) and returns the product's current
+        slug so the frontend can issue a permanent redirect instead of a 404.
+        """
+        old_slug = request.query_params.get('slug', '')
+        redirect_obj = SlugRedirect.objects.filter(old_slug=old_slug).select_related('product').first()
+        new_slug = redirect_obj.product.slug if redirect_obj and redirect_obj.product.is_active else None
+        return Response({'new_slug': new_slug})
 
     @action(detail=True, methods=['get', 'put'], url_path='tds')
     def tds(self, request, slug=None):

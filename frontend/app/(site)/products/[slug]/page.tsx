@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Metadata } from 'next'
@@ -19,6 +19,18 @@ async function getProductData(slug: string) {
   try {
     return await api.getProduct(slug)
   } catch (e) {
+    return null
+  }
+}
+
+// A slug that was corrected (e.g. by fix_truncated_slugs) has an old->new
+// mapping recorded server-side — check it before giving up with a 404, so
+// already-indexed/bookmarked URLs 301 instead of breaking.
+async function getRedirectSlug(oldSlug: string): Promise<string | null> {
+  try {
+    const res = await api.resolveSlugRedirect(oldSlug)
+    return res.new_slug
+  } catch {
     return null
   }
 }
@@ -59,7 +71,11 @@ export default async function ProductDetailPage({
 }) {
   const resolvedParams = await params
   const product = await getProductData(resolvedParams.slug)
-  if (!product) notFound()
+  if (!product) {
+    const newSlug = await getRedirectSlug(resolvedParams.slug)
+    if (newSlug) permanentRedirect(`/products/${newSlug}`)
+    notFound()
+  }
 
   // Fetch related products (same category)
   let relatedProducts: any[] = []
