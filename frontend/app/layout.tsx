@@ -81,7 +81,13 @@ export default function RootLayout({
       className={`${alice.variable} ${jetbrainsMono.variable}`}
       suppressHydrationWarning
     >
-      <body className="antialiased min-h-screen flex flex-col bg-kivi-white font-sans">
+      <head>
+        {/* Nearly every product image is served from here — a head start on
+            DNS+TLS shaves real time off the LCP image fetch on every page. */}
+        <link rel="preconnect" href="https://res.cloudinary.com" />
+        <link rel="dns-prefetch" href="https://res.cloudinary.com" />
+      </head>
+      <body className="antialiased min-h-screen flex flex-col font-sans" style={{ background: 'var(--bg-page)' }}>
         <Script id="kivi-theme-init" strategy="beforeInteractive">
           {`
             (function () {

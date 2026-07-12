@@ -79,7 +79,7 @@ export default async function CategoryAuthorityPage({
       <SchemaMarkup schema={breadcrumbObj} />
       {faqs.length > 0 && <SchemaMarkup schema={faqSchema(faqs)} />}
 
-      <div className="bg-kivi-white min-h-screen py-12 text-kivi-gray font-sans">
+      <div className="min-h-screen py-12 font-sans" style={{ background: 'var(--bg-page)', color: 'var(--text-body)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10 animate-fade-in">
           <Breadcrumbs items={breadcrumbItems} />
 
@@ -88,11 +88,11 @@ export default async function CategoryAuthorityPage({
             <span className="text-xs uppercase font-bold tracking-widest text-kivi-cyan">
               Product Category — Kenya · Uganda · Tanzania
             </span>
-            <h1 className="font-display font-black text-3xl md:text-4xl text-kivi-navy uppercase tracking-wide">
+            <h1 className="font-display font-black text-3xl md:text-4xl uppercase tracking-wide text-[var(--text-heading)]">
               {category.name}
             </h1>
             {category.description && (
-              <p className="text-sm leading-relaxed text-kivi-gray">{category.description}</p>
+              <p className="text-sm leading-relaxed" style={{ color: 'var(--text-muted)' }}>{category.description}</p>
             )}
           </div>
 
@@ -102,7 +102,7 @@ export default async function CategoryAuthorityPage({
               <h2 className="font-display font-black text-sm uppercase tracking-wider text-kivi-navy border-b border-kivi-cyan/15 pb-2">
                 Industry Overview & Buying Guidance
               </h2>
-              <div className="text-sm leading-relaxed whitespace-pre-line text-kivi-gray">
+              <div className="text-sm leading-relaxed whitespace-pre-line text-[var(--paper-muted)]">
                 {category.overview_content}
               </div>
             </div>
@@ -124,7 +124,7 @@ export default async function CategoryAuthorityPage({
                           {benefit.title}
                         </h3>
                         {benefit.description && (
-                          <p className="text-sm leading-relaxed text-kivi-gray pl-6">{benefit.description}</p>
+                          <p className="text-sm leading-relaxed text-[var(--paper-muted)] pl-6">{benefit.description}</p>
                         )}
                       </div>
                     ))}
@@ -133,7 +133,7 @@ export default async function CategoryAuthorityPage({
               )}
 
               {(category.industries_served?.length ?? 0) > 0 && (
-                <div className="lg:col-span-4 bg-kivi-surface border border-kivi-cyan/15 p-6 rounded-kivi text-kivi-white shadow-glow-cyan space-y-4">
+                <div className="lg:col-span-4 bg-kivi-navy border border-kivi-cyan/15 p-6 rounded-kivi text-[var(--panel-text)] shadow-glow-cyan space-y-4">
                   <h2 className="font-display font-black text-xs uppercase tracking-wider text-kivi-cyan border-b border-kivi-cyan/10 pb-3 flex items-center gap-2">
                     <Factory size={14} /> Industries Served
                   </h2>
@@ -154,7 +154,7 @@ export default async function CategoryAuthorityPage({
           {products.length > 0 && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <h2 className="font-display font-black text-lg text-kivi-navy uppercase tracking-wide">
+                <h2 className="font-display font-black text-lg uppercase tracking-wide text-[var(--text-heading)]">
                   {category.name} Products ({products.length})
                 </h2>
                 <Link
@@ -182,7 +182,7 @@ export default async function CategoryAuthorityPage({
                 {faqs.map((faq, i) => (
                   <div key={i} className="space-y-1.5">
                     <h3 className="text-sm font-bold text-kivi-navy">{faq.question}</h3>
-                    <p className="text-sm leading-relaxed text-kivi-gray">{faq.answer}</p>
+                    <p className="text-sm leading-relaxed text-[var(--paper-muted)]">{faq.answer}</p>
                   </div>
                 ))}
               </div>

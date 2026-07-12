@@ -330,7 +330,7 @@ export default function AdminDashboardPage() {
 
   if (error || !metrics) {
     return (
-      <div className="border p-6 rounded-[4px] text-white space-y-4" style={{ background: 'var(--kivi-error-bg)', borderColor: 'var(--kivi-error)' }}>
+      <div className="border p-6 rounded-[4px] space-y-4" style={{ background: 'var(--kivi-error-bg)', borderColor: 'var(--kivi-error)', color: 'var(--text-primary)' }}>
         <h2 className="font-display font-bold text-lg flex items-center gap-2" style={{ color: 'var(--kivi-error)' }}>
           <AlertTriangle /> Authorization Required
         </h2>
@@ -379,7 +379,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex flex-wrap gap-2 border-b" style={{ borderColor: 'var(--border-divider)' }}>
+      <div className="flex flex-nowrap gap-2 border-b overflow-x-auto" style={{ borderColor: 'var(--border-divider)' }}>
         {[
           { id: 'overview', label: 'Overview', icon: Activity },
           { id: 'seo', label: 'SEO Audit', icon: Search },
@@ -454,7 +454,7 @@ export default function AdminDashboardPage() {
                   </span>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4 text-center">
+                <div className="grid gap-4 text-center sm:grid-cols-2 lg:grid-cols-3">
                   <div className="p-3 rounded" style={{ background: 'var(--bg-card-alt)' }}>
                     <span className="text-[10px] block" style={{ color: 'var(--text-secondary)' }}>{metrics.google_search_console.source === 'search_console' ? 'Total Clicks' : 'Total Searches'}</span>
                     <strong className="text-xl font-mono" style={{ color: 'var(--text-primary)' }}>{metrics.google_search_console.clicks}</strong>
@@ -1126,12 +1126,12 @@ export default function AdminDashboardPage() {
                 <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
                   <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
                     style={{ background: msg.role === 'user' ? 'var(--kivi-cyan)' : 'var(--bg-card-alt)', border: '1px solid var(--border-card)' }}>
-                    {msg.role === 'user' ? <span className="text-[10px] font-black text-white">U</span> : <Bot size={12} style={{ color: 'var(--kivi-cyan)' }} />}
+                    {msg.role === 'user' ? <span className="text-[10px] font-black" style={{ color: '#002040' }}>U</span> : <Bot size={12} style={{ color: 'var(--kivi-cyan)' }} />}
                   </div>
                   <div className="max-w-[80%] rounded-[4px] px-4 py-3 text-xs leading-relaxed"
                     style={{
                       background: msg.role === 'user' ? 'var(--kivi-cyan)' : 'var(--bg-card)',
-                      color: msg.role === 'user' ? '#fff' : 'var(--text-primary)',
+                      color: msg.role === 'user' ? '#002040' : 'var(--text-primary)',
                       border: msg.role === 'user' ? 'none' : '1px solid var(--border-card)'
                     }}>
                     {msg.content}

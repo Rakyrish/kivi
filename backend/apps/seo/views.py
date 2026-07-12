@@ -27,6 +27,8 @@ class SitemapView(View):
             ('/about', '0.7', 'monthly'),
             ('/contact', '0.7', 'monthly'),
             ('/blog', '0.8', 'weekly'),
+            ('/industries', '0.7', 'monthly'),
+            ('/services', '0.7', 'monthly'),
         ]:
             lines += [f'<url><loc>{base}{path}</loc>'
                       f'<changefreq>{freq}</changefreq>'

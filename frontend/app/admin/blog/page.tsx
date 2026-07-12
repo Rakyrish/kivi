@@ -8,7 +8,7 @@ export default async function AdminBlogPage() {
   let posts: BlogPost[] = []
 
   try {
-    posts = await api.getBlogPosts()
+    posts = await api.getBlogPosts({ forwardAuth: true })
   } catch (_) {}
 
   return (

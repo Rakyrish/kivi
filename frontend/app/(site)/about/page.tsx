@@ -47,7 +47,7 @@ const values = [
 
 export default function AboutPage() {
   return (
-    <div className="bg-[#F4F7FA] min-h-screen text-[#606060]">
+    <div className="min-h-screen" style={{ background: 'var(--bg-page)', color: 'var(--text-muted)' }}>
       <SchemaMarkup
         schema={breadcrumbSchema([
           { name: 'Home', url: SITE.url },
@@ -69,22 +69,22 @@ export default function AboutPage() {
       </section>
 
       {/* Mission / Vision */}
-      <section className="py-20 bg-white border-b border-[#E8EEF4]">
+      <section className="py-20 border-b" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-card)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
           <div className="space-y-6">
             <div>
               <div className="text-[10px] uppercase font-bold tracking-widest text-[#00A0C0] mb-2">Our Purpose</div>
-              <h2 className="font-display font-black text-2xl md:text-3xl text-[#002040] uppercase tracking-wide">
+              <h2 className="font-display font-black text-2xl md:text-3xl uppercase tracking-wide" style={{ color: 'var(--text-heading)' }}>
                 Mission & Vision
               </h2>
             </div>
             <div className="space-y-4 text-xs leading-relaxed">
               <div className="border-l-2 border-[#00A0C0] pl-5 space-y-2">
-                <div className="font-display font-extrabold text-xs uppercase tracking-wider text-[#002040]">Mission</div>
+                <div className="font-display font-extrabold text-xs uppercase tracking-wider" style={{ color: 'var(--text-heading)' }}>Mission</div>
                 <p>To supply industrial and specialty chemicals of consistent, verified quality to East African manufacturers — enabling them to build more, process better, and grow faster.</p>
               </div>
-              <div className="border-l-2 border-[#E8EEF4] pl-5 space-y-2">
-                <div className="font-display font-extrabold text-xs uppercase tracking-wider text-[#002040]">Vision</div>
+              <div className="border-l-2 pl-5 space-y-2" style={{ borderColor: 'var(--border-card)' }}>
+                <div className="font-display font-extrabold text-xs uppercase tracking-wider" style={{ color: 'var(--text-heading)' }}>Vision</div>
                 <p>To become the most trusted and technically capable chemical distributor serving the African continent — from basic industrial supply to specialty formulations.</p>
               </div>
             </div>
@@ -98,9 +98,9 @@ export default function AboutPage() {
               { stat: '5+', label: 'Countries Served' },
               { stat: '13+', label: 'Categories' },
             ].map(({ stat, label }) => (
-              <div key={label} className="bg-[#002040] border border-[#00A0C0]/20 p-6 rounded-[4px] text-center">
+              <div key={label} className="bg-kivi-navy border border-[#00A0C0]/20 p-6 rounded-[4px] text-center">
                 <div className="font-display font-black text-3xl text-[#00A0C0] font-mono">{stat}</div>
-                <div className="text-[10px] uppercase font-bold tracking-wider text-[#94A3B8] mt-2">{label}</div>
+                <div className="text-[10px] uppercase font-bold tracking-wider text-[var(--panel-muted)] mt-2">{label}</div>
               </div>
             ))}
           </div>
@@ -108,22 +108,26 @@ export default function AboutPage() {
       </section>
 
       {/* Core Values */}
-      <section className="py-20 bg-[#F4F7FA] border-b border-[#E8EEF4]">
+      <section className="py-20 border-b" style={{ background: 'var(--bg-page)', borderColor: 'var(--border-card)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-xl mx-auto mb-14">
             <div className="text-[10px] uppercase font-bold tracking-widest text-[#00A0C0] mb-2">What Drives Us</div>
-            <h2 className="font-display font-black text-2xl md:text-3xl text-[#002040] uppercase tracking-wide">
+            <h2 className="font-display font-black text-2xl md:text-3xl uppercase tracking-wide" style={{ color: 'var(--text-heading)' }}>
               Core Values
             </h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {values.map(({ icon: Icon, title, body }) => (
-              <div key={title} className="bg-white border border-[#E8EEF4] hover:border-[#00A0C0] p-6 rounded-[4px] space-y-3 transition-all duration-300">
+              <div
+                key={title}
+                className="border hover:border-[#00A0C0] p-6 rounded-[4px] space-y-3 transition-all duration-300"
+                style={{ background: 'var(--bg-card)', borderColor: 'var(--border-card)' }}
+              >
                 <div className="text-[#00A0C0] bg-[#00A0C0]/10 p-2.5 rounded-sm w-fit">
                   <Icon size={20} />
                 </div>
-                <h3 className="font-display font-bold text-sm text-[#002040] uppercase tracking-wide">{title}</h3>
-                <p className="text-xs text-[#606060] leading-relaxed">{body}</p>
+                <h3 className="font-display font-bold text-sm uppercase tracking-wide" style={{ color: 'var(--text-heading)' }}>{title}</h3>
+                <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>{body}</p>
               </div>
             ))}
           </div>

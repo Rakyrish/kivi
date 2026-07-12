@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { Product, Category } from '@/types'
 import ProductCard from './ProductCard'
+import FeaturedProductsDesktop from './FeaturedProductsDesktop'
 
 interface FeaturedProductsProps {
   groups: { category: Category; products: Product[] }[]
@@ -47,7 +48,8 @@ export default function FeaturedProducts({ groups }: FeaturedProductsProps) {
           </Link>
         </div>
 
-        <div className="space-y-16">
+        {/* Mobile / tablet: unchanged — one row per category, 2 up to sm, 3 from md. */}
+        <div className="space-y-16 lg:hidden">
           {groups.map(({ category, products }) => (
             <div key={category.id}>
               <div className="flex items-center justify-between gap-4 mb-6">
@@ -76,6 +78,11 @@ export default function FeaturedProducts({ groups }: FeaturedProductsProps) {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Desktop: category tabs on the left, hovering swaps the product panel. */}
+        <div className="hidden lg:block">
+          <FeaturedProductsDesktop groups={groups} />
         </div>
       </div>
     </section>

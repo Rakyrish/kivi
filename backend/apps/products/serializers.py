@@ -51,7 +51,10 @@ class ProductSerializer(serializers.ModelSerializer):
 class SiteSettingSerializer(serializers.ModelSerializer):
     class Meta:
         model = SiteSetting
-        fields = '__all__'
+        # revalidate_secret is a server-to-server webhook credential — GET on this
+        # endpoint is AllowAny (public site settings like phone/address), so it must
+        # never round-trip through this serializer or it'd be readable by anyone.
+        exclude = ['revalidate_secret']
 
 
 class SavedProductSerializer(serializers.ModelSerializer):

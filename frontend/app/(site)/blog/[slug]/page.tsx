@@ -65,7 +65,7 @@ export default async function BlogPostDetailPage({
   ]
 
   return (
-    <div className="bg-[#F4F7FA] min-h-screen py-12 text-[#606060]">
+    <div className="min-h-screen py-12" style={{ background: 'var(--bg-page)', color: 'var(--text-muted)' }}>
       <SchemaMarkup schema={articleSchema(post)} />
       <SchemaMarkup schema={breadcrumbSchema(breadcrumbItems)} />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
@@ -83,9 +83,12 @@ export default async function BlogPostDetailPage({
         </div>
 
         {/* Article Box */}
-        <article className="bg-white border border-[#E8EEF4] rounded-[4px] shadow-sm overflow-hidden p-6 md:p-10 space-y-6">
+        <article
+          className="border rounded-[4px] shadow-sm overflow-hidden p-6 md:p-10 space-y-6"
+          style={{ background: 'var(--bg-card)', borderColor: 'var(--border-card)' }}
+        >
           {/* Metadata */}
-          <div className="flex items-center gap-2 text-[10px] text-[#94A3B8]">
+          <div className="flex items-center gap-2 text-[10px]" style={{ color: 'var(--text-secondary)' }}>
             <Calendar size={12} />
             <time dateTime={publishedDate} className="font-mono">
               {new Date(publishedDate).toLocaleDateString('en-KE', {
@@ -97,18 +100,18 @@ export default async function BlogPostDetailPage({
           </div>
 
           {/* Title */}
-          <h1 className="font-display font-black text-2xl md:text-4xl text-[#002040] uppercase tracking-wide leading-tight">
+          <h1 className="font-display font-black text-2xl md:text-4xl uppercase tracking-wide leading-tight" style={{ color: 'var(--text-heading)' }}>
             {post.title}
           </h1>
 
           {/* Summary / Lead paragraph */}
-          <p className="text-xs md:text-sm font-semibold text-[#002040]/70 italic leading-relaxed">
+          <p className="text-xs md:text-sm font-semibold italic leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
             {post.summary}
           </p>
 
           {/* Cover Image */}
           {post.image && (
-            <div className="relative aspect-video w-full rounded-[2px] overflow-hidden bg-[#002040]/5 border border-[#E8EEF4]">
+            <div className="relative aspect-video w-full rounded-[2px] overflow-hidden border" style={{ background: 'var(--bg-card-alt)', borderColor: 'var(--border-card)' }}>
               <Image
                 src={post.image}
                 alt={post.title}
@@ -121,7 +124,7 @@ export default async function BlogPostDetailPage({
           )}
 
           {/* Body Content */}
-          <div className="border-t border-[#E8EEF4] pt-8 text-xs md:text-sm leading-relaxed text-[#606060] space-y-4 whitespace-pre-line font-sans">
+          <div className="border-t pt-8 text-xs md:text-sm leading-relaxed space-y-4 whitespace-pre-line font-sans" style={{ borderColor: 'var(--border-card)', color: 'var(--text-muted)' }}>
             {post.content}
           </div>
         </article>

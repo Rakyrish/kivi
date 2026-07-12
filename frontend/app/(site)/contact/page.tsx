@@ -14,7 +14,7 @@ export const metadata: Metadata = buildMetadata({
 
 export default function ContactPage() {
   return (
-    <div className="bg-[#F4F7FA] min-h-screen text-[#606060]">
+    <div className="min-h-screen" style={{ background: 'var(--bg-page)', color: 'var(--text-muted)' }}>
       <SchemaMarkup schema={localBusinessSchema()} />
       <SchemaMarkup schema={contactPageSchema()} />
       <SchemaMarkup
@@ -41,7 +41,7 @@ export default function ContactPage() {
         {/* Contact Details Sidebar */}
         <aside className="space-y-6 lg:col-span-1">
           <div>
-            <h2 className="font-display font-black text-sm uppercase tracking-wider text-[#002040] mb-6 border-l-2 border-[#00A0C0] pl-3">
+            <h2 className="font-display font-black text-sm uppercase tracking-wider mb-6 border-l-2 border-[#00A0C0] pl-3" style={{ color: 'var(--text-heading)' }}>
               Contact Information
             </h2>
             <ul className="space-y-5 text-xs">
@@ -50,7 +50,7 @@ export default function ContactPage() {
                   <MapPin size={16} />
                 </div>
                 <div>
-                  <div className="font-bold text-[#002040] uppercase text-[10px] tracking-wider mb-1">Physical Address</div>
+                  <div className="font-bold uppercase text-[10px] tracking-wider mb-1" style={{ color: 'var(--text-heading)' }}>Physical Address</div>
                   <div className="leading-relaxed">{SITE.address}<br />{SITE.city}, {SITE.country}</div>
                 </div>
               </li>
@@ -61,7 +61,7 @@ export default function ContactPage() {
                     <Phone size={16} />
                   </div>
                   <div>
-                    <div className="font-bold text-[#002040] uppercase text-[10px] tracking-wider mb-1">Phone / WhatsApp</div>
+                    <div className="font-bold uppercase text-[10px] tracking-wider mb-1" style={{ color: 'var(--text-heading)' }}>Phone / WhatsApp</div>
                     <a href={`tel:${SITE.phone}`} className="hover:text-[#00A0C0] transition-colors">{SITE.phone}</a>
                     {SITE.whatsapp && SITE.whatsapp !== SITE.phone && (
                       <div className="mt-1">
@@ -78,7 +78,7 @@ export default function ContactPage() {
                     <Mail size={16} />
                   </div>
                   <div>
-                    <div className="font-bold text-[#002040] uppercase text-[10px] tracking-wider mb-1">Email</div>
+                    <div className="font-bold uppercase text-[10px] tracking-wider mb-1" style={{ color: 'var(--text-heading)' }}>Email</div>
                     <a href={`mailto:${SITE.email}`} className="hover:text-[#00A0C0] transition-colors break-all">{SITE.email}</a>
                   </div>
                 </li>
@@ -90,7 +90,7 @@ export default function ContactPage() {
                     <Clock size={16} />
                   </div>
                   <div>
-                    <div className="font-bold text-[#002040] uppercase text-[10px] tracking-wider mb-1">Opening Hours</div>
+                    <div className="font-bold uppercase text-[10px] tracking-wider mb-1" style={{ color: 'var(--text-heading)' }}>Opening Hours</div>
                     <div className="leading-relaxed whitespace-pre-line">{SITE.openingHours}</div>
                   </div>
                 </li>

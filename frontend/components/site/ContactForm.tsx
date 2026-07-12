@@ -55,11 +55,11 @@ export default function ContactForm() {
   }
 
   return (
-    <div className="bg-[#081525] border border-[#00A0C0]/15 p-6 md:p-8 rounded-[4px] shadow-xl text-[#F4F7FA]">
-      <h3 className="font-display font-black text-lg md:text-xl uppercase tracking-wider text-[#F4F7FA] mb-2">
+    <div className="border p-6 md:p-8 rounded-[4px] shadow-xl" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-card)', color: 'var(--text-primary)' }}>
+      <h3 className="font-display font-black text-lg md:text-xl uppercase tracking-wider mb-2" style={{ color: 'var(--text-heading)' }}>
         Send Inquiry
       </h3>
-      <p className="text-xs text-[#94A3B8] mb-6">
+      <p className="text-xs mb-6" style={{ color: 'var(--text-secondary)' }}>
         Fill out the form below. Our chemical sales engineers will respond within 24 hours.
       </p>
 
@@ -86,7 +86,7 @@ export default function ContactForm() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1">
-            <label htmlFor="name" className="text-[10px] uppercase font-bold tracking-wider text-[#606060] block">
+            <label htmlFor="name" className="text-[10px] uppercase font-bold tracking-wider text-[var(--text-muted)] block">
               Full Name <span className="text-red-500">*</span>
             </label>
             <input
@@ -97,12 +97,12 @@ export default function ContactForm() {
               onChange={handleChange}
               required
               disabled={loading}
-              className="w-full bg-[#002040]/30 border border-[#00A0C0]/15 focus:border-[#00A0C0] text-[#F4F7FA] px-4 py-2.5 text-xs focus:outline-none transition-colors rounded-[2px]"
+              className="w-full bg-[var(--bg-input)] border border-[var(--border-input)] focus:border-[#00A0C0] text-[var(--text-primary)] px-4 py-2.5 text-xs focus:outline-none transition-colors rounded-[2px]"
             />
           </div>
 
           <div className="space-y-1">
-            <label htmlFor="email" className="text-[10px] uppercase font-bold tracking-wider text-[#606060] block">
+            <label htmlFor="email" className="text-[10px] uppercase font-bold tracking-wider text-[var(--text-muted)] block">
               Email Address <span className="text-red-500">*</span>
             </label>
             <input
@@ -113,14 +113,14 @@ export default function ContactForm() {
               onChange={handleChange}
               required
               disabled={loading}
-              className="w-full bg-[#002040]/30 border border-[#00A0C0]/15 focus:border-[#00A0C0] text-[#F4F7FA] px-4 py-2.5 text-xs focus:outline-none transition-colors rounded-[2px]"
+              className="w-full bg-[var(--bg-input)] border border-[var(--border-input)] focus:border-[#00A0C0] text-[var(--text-primary)] px-4 py-2.5 text-xs focus:outline-none transition-colors rounded-[2px]"
             />
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1">
-            <label htmlFor="phone" className="text-[10px] uppercase font-bold tracking-wider text-[#606060] block">
+            <label htmlFor="phone" className="text-[10px] uppercase font-bold tracking-wider text-[var(--text-muted)] block">
               Phone Number
             </label>
             <input
@@ -130,12 +130,12 @@ export default function ContactForm() {
               value={formData.phone}
               onChange={handleChange}
               disabled={loading}
-              className="w-full bg-[#002040]/30 border border-[#00A0C0]/15 focus:border-[#00A0C0] text-[#F4F7FA] px-4 py-2.5 text-xs focus:outline-none transition-colors rounded-[2px]"
+              className="w-full bg-[var(--bg-input)] border border-[var(--border-input)] focus:border-[#00A0C0] text-[var(--text-primary)] px-4 py-2.5 text-xs focus:outline-none transition-colors rounded-[2px]"
             />
           </div>
 
           <div className="space-y-1">
-            <label htmlFor="company_name" className="text-[10px] uppercase font-bold tracking-wider text-[#606060] block">
+            <label htmlFor="company_name" className="text-[10px] uppercase font-bold tracking-wider text-[var(--text-muted)] block">
               Company Name
             </label>
             <input
@@ -145,13 +145,13 @@ export default function ContactForm() {
               value={formData.company_name}
               onChange={handleChange}
               disabled={loading}
-              className="w-full bg-[#002040]/30 border border-[#00A0C0]/15 focus:border-[#00A0C0] text-[#F4F7FA] px-4 py-2.5 text-xs focus:outline-none transition-colors rounded-[2px]"
+              className="w-full bg-[var(--bg-input)] border border-[var(--border-input)] focus:border-[#00A0C0] text-[var(--text-primary)] px-4 py-2.5 text-xs focus:outline-none transition-colors rounded-[2px]"
             />
           </div>
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="subject" className="text-[10px] uppercase font-bold tracking-wider text-[#606060] block">
+          <label htmlFor="subject" className="text-[10px] uppercase font-bold tracking-wider text-[var(--text-muted)] block">
             Subject / Chemical Required <span className="text-red-500">*</span>
           </label>
           <input
@@ -162,12 +162,12 @@ export default function ContactForm() {
             onChange={handleChange}
             required
             disabled={loading}
-            className="w-full bg-[#002040]/30 border border-[#00A0C0]/15 focus:border-[#00A0C0] text-[#F4F7FA] px-4 py-2.5 text-xs focus:outline-none transition-colors rounded-[2px]"
+            className="w-full bg-[var(--bg-input)] border border-[var(--border-input)] focus:border-[#00A0C0] text-[var(--text-primary)] px-4 py-2.5 text-xs focus:outline-none transition-colors rounded-[2px]"
           />
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="message" className="text-[10px] uppercase font-bold tracking-wider text-[#606060] block">
+          <label htmlFor="message" className="text-[10px] uppercase font-bold tracking-wider text-[var(--text-muted)] block">
             Message details (specification, volume, delivery timeline) <span className="text-red-500">*</span>
           </label>
           <textarea
@@ -178,7 +178,7 @@ export default function ContactForm() {
             onChange={handleChange}
             required
             disabled={loading}
-            className="w-full bg-[#002040]/30 border border-[#00A0C0]/15 focus:border-[#00A0C0] text-[#F4F7FA] px-4 py-2.5 text-xs focus:outline-none transition-colors rounded-[2px] resize-none h-32"
+            className="w-full bg-[var(--bg-input)] border border-[var(--border-input)] focus:border-[#00A0C0] text-[var(--text-primary)] px-4 py-2.5 text-xs focus:outline-none transition-colors rounded-[2px] resize-none h-32"
           ></textarea>
         </div>
 

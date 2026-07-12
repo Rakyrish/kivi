@@ -96,44 +96,44 @@ export default function NewBlogPostPage() {
   const seoDescCount = form.seo_description.length
 
   return (
-    <div className="space-y-8 max-w-4xl text-kivi-white">
+    <div className="space-y-8 max-w-4xl text-[var(--text-primary)]">
       <div>
         <h1 className="font-display font-black text-2xl uppercase tracking-wide">New Blog Post</h1>
-        <p className="text-xs text-kivi-mid mt-1">Write and publish articles to the Kivi Insights desk.</p>
+        <p className="text-xs text-[var(--text-muted)] mt-1">Write and publish articles to the Kivi Insights desk.</p>
       </div>
 
       {/* AI Blog Generator Assistant Workspace */}
-      <div className="bg-kivi-surface border border-kivi-cyan/20 p-6 rounded-kivi shadow-glow-cyan space-y-4">
+      <div className="bg-[var(--bg-admin-card)] border border-kivi-cyan/20 p-6 rounded-kivi shadow-glow-cyan space-y-4">
         <div className="flex items-center gap-2 border-b border-kivi-cyan/10 pb-3">
           <Sparkles size={18} className="text-kivi-cyan" />
-          <h3 className="font-display font-extrabold text-sm uppercase tracking-wider text-kivi-white">
+          <h3 className="font-display font-extrabold text-sm uppercase tracking-wider text-[var(--text-primary)]">
             AI Blog Copywriter Assistant
           </h3>
         </div>
 
-        <p className="text-[11px] text-kivi-mid leading-relaxed">
+        <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
           Input an industry topic or compliance guideline (e.g. KEBS testing, water storage rules). AI will compose a 1500+ word search-optimized essay.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1">
-            <label className="text-[9px] uppercase font-bold tracking-wider text-kivi-mid block">Topic Idea</label>
+            <label className="text-[9px] uppercase font-bold tracking-wider text-[var(--text-muted)] block">Topic Idea</label>
             <input
               type="text"
               placeholder="e.g. Sodium Hydroxide Safety in Dairy Plants"
               value={aiTopic}
               onChange={e => setAiTopic(e.target.value)}
-              className="w-full bg-kivi-navy/30 border border-kivi-cyan/15 focus:border-kivi-cyan text-kivi-white px-3 py-2 text-xs focus:outline-none transition-colors rounded-kivi-sm"
+              className="w-full bg-[var(--bg-input)] border border-kivi-cyan/15 focus:border-kivi-cyan text-[var(--text-primary)] px-3 py-2 text-xs focus:outline-none transition-colors rounded-kivi-sm"
             />
           </div>
           <div className="space-y-1">
-            <label className="text-[9px] uppercase font-bold tracking-wider text-kivi-mid block">SEO Target Keywords (comma-separated)</label>
+            <label className="text-[9px] uppercase font-bold tracking-wider text-[var(--text-muted)] block">SEO Target Keywords (comma-separated)</label>
             <input
               type="text"
               placeholder="e.g. sodium hydroxide Kenya, dairy sanitation Nairobi"
               value={aiKeywords}
               onChange={e => setAiKeywords(e.target.value)}
-              className="w-full bg-kivi-navy/30 border border-kivi-cyan/15 focus:border-kivi-cyan text-kivi-white px-3 py-2 text-xs focus:outline-none transition-colors rounded-kivi-sm"
+              className="w-full bg-[var(--bg-input)] border border-kivi-cyan/15 focus:border-kivi-cyan text-[var(--text-primary)] px-3 py-2 text-xs focus:outline-none transition-colors rounded-kivi-sm"
             />
           </div>
         </div>
@@ -150,7 +150,7 @@ export default function NewBlogPostPage() {
               <span>AI Quality Audit Score: <strong>{qualityScore}/100</strong> (Excellent readability & depth)</span>
             </div>
           ) : (
-            <div className="text-xs text-kivi-mid">
+            <div className="text-xs text-[var(--text-muted)]">
               Status: Ready
             </div>
           )}
@@ -168,15 +168,15 @@ export default function NewBlogPostPage() {
       </div>
 
       {/* Editor Form */}
-      <form onSubmit={handleSubmit} className="bg-kivi-surface border border-kivi-cyan/10 p-6 md:p-8 rounded-kivi shadow-lg space-y-6">
+      <form onSubmit={handleSubmit} className="bg-[var(--bg-admin-card)] border border-kivi-cyan/10 p-6 md:p-8 rounded-kivi shadow-lg space-y-6">
         {successMsg && (
-          <div className="flex items-center gap-3 bg-kivi-success-bg border border-kivi-success text-kivi-white p-4 rounded-kivi-sm text-xs">
+          <div className="flex items-center gap-3 bg-kivi-success-bg border border-kivi-success text-[var(--text-primary)] p-4 rounded-kivi-sm text-xs">
             <CheckCircle size={16} className="text-kivi-success" />
             {successMsg}
           </div>
         )}
         {errorMsg && (
-          <div className="flex items-center gap-3 bg-kivi-error-bg border border-kivi-error text-kivi-white p-4 rounded-kivi-sm text-xs">
+          <div className="flex items-center gap-3 bg-kivi-error-bg border border-kivi-error text-[var(--text-primary)] p-4 rounded-kivi-sm text-xs">
             <AlertCircle size={16} className="text-kivi-error" />
             {errorMsg}
           </div>
@@ -185,77 +185,77 @@ export default function NewBlogPostPage() {
         {/* Title & Slug */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-1.5">
-            <label className="text-[10px] uppercase font-bold tracking-wider text-kivi-mid block">
+            <label className="text-[10px] uppercase font-bold tracking-wider text-[var(--text-muted)] block">
               Title <span className="text-kivi-error">*</span>
             </label>
             <input type="text" name="title" value={form.title} onChange={handleChange} required disabled={loading}
-              className="w-full bg-kivi-navy/30 border border-kivi-cyan/15 focus:border-kivi-cyan text-kivi-white px-4 py-2.5 text-xs focus:outline-none transition-colors rounded-kivi-sm" />
+              className="w-full bg-[var(--bg-input)] border border-kivi-cyan/15 focus:border-kivi-cyan text-[var(--text-primary)] px-4 py-2.5 text-xs focus:outline-none transition-colors rounded-kivi-sm" />
           </div>
           <div className="space-y-1.5">
-            <label className="text-[10px] uppercase font-bold tracking-wider text-kivi-mid block">
+            <label className="text-[10px] uppercase font-bold tracking-wider text-[var(--text-muted)] block">
               Slug (auto-generated if blank)
             </label>
             <input type="text" name="slug" value={form.slug} onChange={handleChange} disabled={loading}
               placeholder="e.g. sodium-hydroxide-uses-kenya"
-              className="w-full bg-kivi-navy/30 border border-kivi-cyan/15 focus:border-kivi-cyan text-kivi-white px-4 py-2.5 text-xs focus:outline-none transition-colors rounded-kivi-sm font-mono" />
+              className="w-full bg-[var(--bg-input)] border border-kivi-cyan/15 focus:border-kivi-cyan text-[var(--text-primary)] px-4 py-2.5 text-xs focus:outline-none transition-colors rounded-kivi-sm font-mono" />
           </div>
         </div>
 
         {/* Summary */}
         <div className="space-y-1.5">
-          <label className="text-[10px] uppercase font-bold tracking-wider text-kivi-mid block">
+          <label className="text-[10px] uppercase font-bold tracking-wider text-[var(--text-muted)] block">
             Summary / Lead Paragraph <span className="text-kivi-error">*</span>
           </label>
           <textarea name="summary" value={form.summary} onChange={handleChange} rows={3} required disabled={loading}
             placeholder="Brief summary displayed on the blog listing page..."
-            className="w-full bg-kivi-navy/30 border border-kivi-cyan/15 focus:border-kivi-cyan text-kivi-white px-4 py-2.5 text-xs focus:outline-none transition-colors rounded-kivi-sm h-20 resize-none font-sans" />
+            className="w-full bg-[var(--bg-input)] border border-kivi-cyan/15 focus:border-kivi-cyan text-[var(--text-primary)] px-4 py-2.5 text-xs focus:outline-none transition-colors rounded-kivi-sm h-20 resize-none font-sans" />
         </div>
 
         {/* Main Content */}
         <div className="space-y-1.5">
-          <label className="text-[10px] uppercase font-bold tracking-wider text-kivi-mid block">
+          <label className="text-[10px] uppercase font-bold tracking-wider text-[var(--text-muted)] block">
             Article Content (Supports HTML headers, paragraphs, lists) <span className="text-kivi-error">*</span>
           </label>
           <textarea name="content" value={form.content} onChange={handleChange} rows={16} required disabled={loading}
             placeholder="Full article body..."
-            className="w-full bg-kivi-navy/30 border border-kivi-cyan/15 focus:border-kivi-cyan text-kivi-white px-4 py-3 text-xs focus:outline-none transition-colors rounded-kivi-sm h-72 resize-y font-sans" />
+            className="w-full bg-[var(--bg-input)] border border-kivi-cyan/15 focus:border-kivi-cyan text-[var(--text-primary)] px-4 py-3 text-xs focus:outline-none transition-colors rounded-kivi-sm h-72 resize-y font-sans" />
         </div>
 
         {/* Image URL */}
         <div className="space-y-1.5">
-          <label className="text-[10px] uppercase font-bold tracking-wider text-kivi-mid block">Cover Image URL</label>
+          <label className="text-[10px] uppercase font-bold tracking-wider text-[var(--text-muted)] block">Cover Image URL</label>
           <input type="url" name="image" value={form.image} onChange={handleChange} disabled={loading}
             placeholder="https://res.cloudinary.com/..."
-            className="w-full bg-kivi-navy/30 border border-kivi-cyan/15 focus:border-kivi-cyan text-kivi-white px-4 py-2.5 text-xs focus:outline-none transition-colors rounded-kivi-sm" />
+            className="w-full bg-[var(--bg-input)] border border-kivi-cyan/15 focus:border-kivi-cyan text-[var(--text-primary)] px-4 py-2.5 text-xs focus:outline-none transition-colors rounded-kivi-sm" />
         </div>
 
         {/* SEO */}
-        <h3 className="font-display font-black text-sm uppercase tracking-wider text-kivi-white border-b border-kivi-cyan/10 pt-2 pb-3">SEO Meta Tags</h3>
+        <h3 className="font-display font-black text-sm uppercase tracking-wider text-[var(--text-primary)] border-b border-kivi-cyan/10 pt-2 pb-3">SEO Meta Tags</h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-1.5">
             <div className="flex justify-between">
-              <label className="text-[10px] uppercase font-bold tracking-wider text-kivi-mid">SEO Title (60 chars)</label>
-              <span className={`text-[10px] font-mono ${seoTitleCount > 60 ? 'text-kivi-error' : 'text-kivi-mid'}`}>{seoTitleCount}/60</span>
+              <label className="text-[10px] uppercase font-bold tracking-wider text-[var(--text-muted)]">SEO Title (60 chars)</label>
+              <span className={`text-[10px] font-mono ${seoTitleCount > 60 ? 'text-kivi-error' : 'text-[var(--text-muted)]'}`}>{seoTitleCount}/60</span>
             </div>
             <input type="text" name="seo_title" value={form.seo_title} onChange={handleChange} maxLength={60} disabled={loading}
-              className="w-full bg-kivi-navy/30 border border-kivi-cyan/15 focus:border-kivi-cyan text-kivi-white px-4 py-2.5 text-xs focus:outline-none transition-colors rounded-kivi-sm" />
+              className="w-full bg-[var(--bg-input)] border border-kivi-cyan/15 focus:border-kivi-cyan text-[var(--text-primary)] px-4 py-2.5 text-xs focus:outline-none transition-colors rounded-kivi-sm" />
           </div>
           <div className="space-y-1.5">
-            <label className="text-[10px] uppercase font-bold tracking-wider text-kivi-mid block">Keywords</label>
+            <label className="text-[10px] uppercase font-bold tracking-wider text-[var(--text-muted)] block">Keywords</label>
             <input type="text" name="keywords" value={form.keywords} onChange={handleChange} disabled={loading}
               placeholder="Comma-separated keywords"
-              className="w-full bg-kivi-navy/30 border border-kivi-cyan/15 focus:border-kivi-cyan text-kivi-white px-4 py-2.5 text-xs focus:outline-none transition-colors rounded-kivi-sm" />
+              className="w-full bg-[var(--bg-input)] border border-kivi-cyan/15 focus:border-kivi-cyan text-[var(--text-primary)] px-4 py-2.5 text-xs focus:outline-none transition-colors rounded-kivi-sm" />
           </div>
         </div>
 
         <div className="space-y-1.5">
           <div className="flex justify-between">
-            <label className="text-[10px] uppercase font-bold tracking-wider text-kivi-mid">SEO Description (160 chars)</label>
-            <span className={`text-[10px] font-mono ${seoDescCount > 160 ? 'text-kivi-error' : 'text-kivi-mid'}`}>{seoDescCount}/160</span>
+            <label className="text-[10px] uppercase font-bold tracking-wider text-[var(--text-muted)]">SEO Description (160 chars)</label>
+            <span className={`text-[10px] font-mono ${seoDescCount > 160 ? 'text-kivi-error' : 'text-[var(--text-muted)]'}`}>{seoDescCount}/160</span>
           </div>
           <input type="text" name="seo_description" value={form.seo_description} onChange={handleChange} maxLength={160} disabled={loading}
-            className="w-full bg-kivi-navy/30 border border-kivi-cyan/15 focus:border-kivi-cyan text-kivi-white px-4 py-2.5 text-xs focus:outline-none transition-colors rounded-kivi-sm" />
+            className="w-full bg-[var(--bg-input)] border border-kivi-cyan/15 focus:border-kivi-cyan text-[var(--text-primary)] px-4 py-2.5 text-xs focus:outline-none transition-colors rounded-kivi-sm" />
         </div>
 
         {/* Publish toggle */}
@@ -264,8 +264,8 @@ export default function NewBlogPostPage() {
             onChange={handleChange} disabled={loading}
             className="w-4 h-4 accent-kivi-cyan rounded-kivi-sm" />
           <div className="flex flex-col">
-            <span className="text-xs font-bold text-kivi-white">Publish Immediately</span>
-            <span className="text-[9px] text-kivi-mid">Uncheck to save as a private draft</span>
+            <span className="text-xs font-bold text-[var(--text-primary)]">Publish Immediately</span>
+            <span className="text-[9px] text-[var(--text-muted)]">Uncheck to save as a private draft</span>
           </div>
         </label>
 

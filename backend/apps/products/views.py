@@ -2,6 +2,7 @@ from django.core.cache import cache
 from django.db.models import Q
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import Category, Product, SiteSetting, SavedProduct, TechnicalDataSheet, StockMovementLog, SlugRedirect
@@ -9,9 +10,27 @@ from .serializers import CategorySerializer, ProductSerializer, SiteSettingSeria
 import cloudinary.uploader
 
 
+class ProductPagination(PageNumberPagination):
+    # `page_size` was previously silently ignored (PageNumberPagination only
+    # reads it when page_size_query_param is set) — callers requesting a
+    # larger batch (e.g. the admin dashboard, or the catalogue page loading
+    # products for client-side filtering) always got the default 24 back.
+    page_size_query_param = 'page_size'
+    max_page_size = 500
+
+
 class CategoryViewSet(viewsets.ModelViewSet):
     serializer_class = CategorySerializer
     lookup_field = 'slug'
+    # This is public catalog data meant to be crawled and rendered on-demand
+    # by every visitor's SSR page load, all of which originate from the same
+    # Next.js frontend container IP. The default AnonRateThrottle (60/min,
+    # global setting) throttles by IP, so it was rate-limiting the entire
+    # site's traffic as if it were one anonymous client — a single traffic
+    # burst (e.g. many product pages rendering concurrently) tripped it and
+    # produced permanently-cached 404s. Writes stay safe: they require
+    # IsAdminUser below, independent of throttling.
+    throttle_classes = []
 
     def get_queryset(self):
         if self.request.user and self.request.user.is_staff:
@@ -50,6 +69,9 @@ class CategoryViewSet(viewsets.ModelViewSet):
 class ProductViewSet(viewsets.ModelViewSet):
     serializer_class = ProductSerializer
     lookup_field = 'slug'
+    pagination_class = ProductPagination
+    # See CategoryViewSet — same public-catalog / shared-SSR-IP reasoning.
+    throttle_classes = []
 
     def get_queryset(self):
         if self.request.user and self.request.user.is_staff:

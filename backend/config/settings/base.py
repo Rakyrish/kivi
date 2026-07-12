@@ -212,3 +212,11 @@ CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 # Configure Celery Beat Scheduler
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 
+# Internal (container-network) base URL for the Next.js frontend, used to call
+# its on-demand ISR revalidation route when a product/category changes.
+FRONTEND_INTERNAL_URL = os.environ.get('FRONTEND_INTERNAL_URL', 'http://frontend:3000')
+# Shared secret for that same webhook — read from env (not DB) since it must
+# match the identical REVALIDATE_SECRET the frontend container reads from the
+# same .env file; a DB-editable copy could silently drift out of sync.
+REVALIDATE_SECRET = os.environ.get('REVALIDATE_SECRET', '')
+

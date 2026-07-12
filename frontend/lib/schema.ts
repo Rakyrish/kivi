@@ -203,3 +203,15 @@ export function contactPageSchema() {
     mainEntity: { '@id': `${SITE.url}/#localbusiness` },
   }
 }
+
+export function serviceSchema(service: { name: string; description: string; slug: string }) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Service',
+    '@id': `${SITE.url}/services#${service.slug}`,
+    name: service.name,
+    description: service.description,
+    provider: { '@id': `${SITE.url}/#organization` },
+    areaServed: ['Kenya', 'Uganda', 'Tanzania', 'Rwanda'],
+  }
+}

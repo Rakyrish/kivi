@@ -1,16 +1,16 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import {
-  Award, ShieldCheck, Truck, Headphones, Mail, Phone, MapPin,
-  Layers, FlaskConical, Wrench, PackageCheck, MessageSquare,
-  Droplets, Zap, Leaf, Building2, TestTubes, Waves, Beaker,
-  ArrowRight, CheckCircle, Star
+  Mail, Phone, MapPin, Layers, FlaskConical, MessageSquare,
+  ArrowRight, CheckCircle, Star, ShieldCheck, Truck, Wrench, PackageCheck,
 } from 'lucide-react'
 import { Metadata } from 'next'
-import { SITE } from '@/lib/constants'
+import { SITE, ROUTES } from '@/lib/constants'
 import { api } from '@/lib/api'
 import { buildMetadata } from '@/lib/seo'
 import { organizationSchema, websiteSchema, localBusinessSchema } from '@/lib/schema'
+import { INDUSTRIES } from '@/lib/industries'
+import { SERVICES } from '@/lib/services'
 import HeroSection from '@/components/site/HeroSection'
 import FeaturedProducts from '@/components/site/FeaturedProducts'
 import SchemaMarkup from '@/components/site/SchemaMarkup'
@@ -27,22 +27,22 @@ async function getData() {
   let categories: Category[] = []
   try { categories = (await api.getCategories()) || [] } catch {}
 
-  // Featured products grouped by category — one clean row per category on the
-  // homepage. The product list defaults to ordering by featured then recent,
-  // so 5 per category surfaces the featured items first.
+  // Featured products grouped by category. Mobile/tablet shows one row (up
+  // to 5); the desktop hover-tab layout shows up to 2 rows of 4 (8), so we
+  // fetch 8 and let each breakpoint's UI decide how many of those to render.
   const groups: { category: Category; products: Product[] }[] = []
   let totalProductCount = 0
   if (categories.length > 0) {
     const results = await Promise.all(
       categories.map((category) =>
         api
-          .getProducts({ category: category.slug, page_size: 5 })
+          .getProducts({ category: category.slug, page_size: 8 })
           .then((res) => ({ category, products: res.results || [], count: res.count }))
           .catch(() => ({ category, products: [], count: 0 }))
       )
     )
     for (const { category, products, count } of results) {
-      if (products.length > 0) groups.push({ category, products })
+      if (products.length > 1) groups.push({ category, products })
       totalProductCount += count || products.length
     }
   }
@@ -50,25 +50,8 @@ async function getData() {
   return { groups, categories, totalProductCount }
 }
 
-const INDUSTRIES = [
-  { name: 'Water Treatment', icon: Waves, description: 'Coagulants, flocculants, pH adjusters, and disinfectants for municipal and industrial water systems.' },
-  { name: 'Manufacturing', icon: Building2, description: 'Industrial solvents, cleaning agents, and process chemicals for production facilities.' },
-  { name: 'Agriculture', icon: Leaf, description: 'Fertilizers, adjuvants, soil conditioners, and crop protection chemical inputs.' },
-  { name: 'Food Processing', icon: Beaker, description: 'Food-grade preservatives, sanitizers, and process aids that comply with KEBS standards.' },
-  { name: 'Mining', icon: Zap, description: 'Reagents, acids, and extractants used in ore processing and mineral recovery.' },
-  { name: 'Construction', icon: Building2, description: 'Adhesives, sealants, concrete additives, and waterproofing compounds.' },
-  { name: 'Hospitality', icon: Droplets, description: 'Commercial cleaning and sanitization chemicals for hotels and facilities.' },
-  { name: 'Laboratories', icon: TestTubes, description: 'Analytical-grade reagents, standards, and solvents for research and testing.' },
-]
-
-const WHY_KIVI = [
-  { icon: Award, title: 'Verified Purity', description: 'Every batch is independently lab-verified, matching KEBS and ISO 9001:2015 safety specifications.' },
-  { icon: ShieldCheck, title: 'Regulatory Compliance', description: 'Full documentation: MSDS sheets, UN safety codes, certificates of analysis, and customs clearance support.' },
-  { icon: Truck, title: 'East Africa Delivery', description: 'Structured logistics dispatching to Nairobi, Mombasa, Kisumu, Kampala, Dar es Salaam, and beyond.' },
-  { icon: Headphones, title: 'Technical Support', description: 'Resident chemical engineering consultants guide formulation setups and application specifications.' },
-  { icon: PackageCheck, title: 'Flexible Packaging', description: 'Multiple packaging options from 1kg lab quantities to 200L industrial drums and bulk tanker deliveries.' },
-  { icon: Wrench, title: 'Custom Formulations', description: 'In-house blending and toll-manufacturing services tailored to your specific industrial process requirements.' },
-]
+// Full copy for these lives in lib/industries.ts / lib/services.ts, shared with
+// the dedicated /industries and /services pages — this homepage section is a teaser.
 
 export default async function HomePage() {
   const { groups, categories, totalProductCount } = await getData()
@@ -184,8 +167,9 @@ export default async function HomePage() {
             </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {INDUSTRIES.map(({ name, icon: Icon, description }) => (
-              <div
+            {INDUSTRIES.map(({ name, icon: Icon, shortDescription, slug }) => (
+              <Link
+                href={`${ROUTES.industries}#${slug}`}
                 key={name}
                 className="border rounded-[4px] p-5 transition-all duration-300 group"
                 style={{ background: 'var(--bg-page)', borderColor: 'var(--border-card)' }}
@@ -194,9 +178,18 @@ export default async function HomePage() {
                   <Icon size={18} style={{ color: 'var(--kivi-cyan)' }} />
                 </div>
                 <h3 className="font-display font-bold text-xs uppercase tracking-wide mb-2" style={{ color: 'var(--text-heading)' }}>{name}</h3>
-                <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>{description}</p>
-              </div>
+                <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>{shortDescription}</p>
+              </Link>
             ))}
+          </div>
+          <div className="text-center mt-8">
+            <Link
+              href={ROUTES.industries}
+              className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider"
+              style={{ color: 'var(--kivi-cyan)' }}
+            >
+              View All Industries We Serve <ArrowRight size={14} />
+            </Link>
           </div>
         </div>
       </section>
@@ -211,8 +204,9 @@ export default async function HomePage() {
             </h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {WHY_KIVI.map(({ icon: Icon, title, description }) => (
-              <div
+            {SERVICES.map(({ icon: Icon, title, shortDescription, slug }) => (
+              <Link
+                href={`${ROUTES.services}#${slug}`}
                 key={title}
                 className="border rounded-[4px] p-6 transition-all duration-300 group"
                 style={{ background: 'var(--bg-card)', borderColor: 'var(--border-card)' }}
@@ -223,11 +217,20 @@ export default async function HomePage() {
                   </div>
                   <div>
                     <h3 className="font-display font-bold text-xs uppercase tracking-wide mb-2" style={{ color: 'var(--text-heading)' }}>{title}</h3>
-                    <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>{description}</p>
+                    <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>{shortDescription}</p>
                   </div>
                 </div>
-              </div>
+              </Link>
             ))}
+          </div>
+          <div className="text-center mt-8">
+            <Link
+              href={ROUTES.services}
+              className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider"
+              style={{ color: 'var(--kivi-cyan)' }}
+            >
+              View All Services <ArrowRight size={14} />
+            </Link>
           </div>
         </div>
       </section>

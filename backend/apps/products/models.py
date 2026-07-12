@@ -200,7 +200,7 @@ class Product(models.Model):
 
     # ── Status Flags ──
     is_active = models.BooleanField(default=True)
-    is_featured = models.BooleanField(default=False)
+    is_featured = models.BooleanField(default=True)
     in_stock = models.BooleanField(default=True)
 
     # ── Inventory ──

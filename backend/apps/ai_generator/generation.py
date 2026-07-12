@@ -342,6 +342,13 @@ _IDENTITY_OVERFLOW_FALLBACK = {
 }
 
 
+_PLACEHOLDER_VALUES = {'n/a', 'information requires manual verification.'}
+
+
+def is_placeholder_value(value):
+    return isinstance(value, str) and value.strip().lower() in _PLACEHOLDER_VALUES
+
+
 def is_mock_mode():
     api_key = getattr(settings, 'OPENAI_API_KEY', '')
     return not api_key or 'mock' in api_key.lower()
@@ -476,7 +483,17 @@ def generate_product_content(product_name='', category='', image_b64=None,
     text += "."
 
     if existing:
-        known = {k: v for k, v in existing.items() if v}
+        # Placeholder sentinels ("N/A", "Information requires manual verification.")
+        # mean the field is NOT actually known — treating them as "ground truth"
+        # tells the model to preserve them across every future regeneration instead
+        # of ever filling them in, which is exactly the bug this filters out.
+        known = {k: v for k, v in existing.items() if v and not is_placeholder_value(v)}
+        if isinstance(known.get('specifications'), dict):
+            specs = {sk: sv for sk, sv in known['specifications'].items() if not is_placeholder_value(sv)}
+            if specs:
+                known['specifications'] = specs
+            else:
+                known.pop('specifications')
         if known:
             text += (
                 "\n\nThis is a CONTENT UPGRADE of an existing catalogue product. The current "

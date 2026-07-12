@@ -36,6 +36,8 @@ export const ROUTES = {
   blog: '/blog',
   about: '/about',
   contact: '/contact',
+  industries: '/industries',
+  services: '/services',
   admin: {
     dashboard: '/admin',
     login: '/admin/login',

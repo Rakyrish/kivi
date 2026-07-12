@@ -106,7 +106,7 @@ export default async function ProductDetailPage({
       <SchemaMarkup schema={breadcrumbObj} />
       {faqs.length > 0 && <SchemaMarkup schema={faqSchema(faqs)} />}
 
-      <div className="bg-kivi-white min-h-screen py-12 text-[var(--paper-text)] font-sans">
+      <div className="min-h-screen py-12 font-sans" style={{ background: 'var(--bg-page)', color: 'var(--text-body)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10 animate-fade-in">
           <Breadcrumbs items={breadcrumbItems} />
 
@@ -399,7 +399,7 @@ export default async function ProductDetailPage({
 
               {/* Safety Information */}
               {product.safety_info && (
-                <div className="bg-kivi-error-bg border border-kivi-error text-kivi-navy p-6 rounded-kivi space-y-3">
+                <div className="bg-kivi-error-bg border border-kivi-error p-6 rounded-kivi space-y-3" style={{ color: 'var(--text-body)' }}>
                   <div className="flex items-center gap-2 text-kivi-error">
                     <AlertTriangle size={18} className="text-kivi-error" />
                     <h2 className="font-display font-black text-xs uppercase tracking-wider text-kivi-error">
@@ -411,7 +411,7 @@ export default async function ProductDetailPage({
                       {product.hazard_classification}
                     </p>
                   )}
-                  <p className="text-xs leading-relaxed text-kivi-navy font-sans">
+                  <p className="text-xs leading-relaxed font-sans" style={{ color: 'var(--text-body)' }}>
                     {product.safety_info}
                   </p>
                 </div>
@@ -480,7 +480,7 @@ export default async function ProductDetailPage({
           {/* Related Products */}
           {relatedProducts.length > 0 && (
             <div className="space-y-6">
-              <h2 className="font-display font-black text-lg text-kivi-navy uppercase tracking-wide">
+              <h2 className="font-display font-black text-lg uppercase tracking-wide text-[var(--text-heading)]">
                 Related Formulations
               </h2>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">

@@ -38,6 +38,8 @@ function getCategoryIcon(name: string): React.ElementType {
 const NAV_LINKS = [
   { name: 'Home', href: '/' },
   { name: 'Products', href: ROUTES.products, hasMega: true },
+  { name: 'Industries', href: ROUTES.industries },
+  { name: 'Services', href: ROUTES.services },
   { name: 'Blog', href: ROUTES.blog },
   { name: 'About', href: ROUTES.about },
   { name: 'Contact', href: ROUTES.contact },

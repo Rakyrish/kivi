@@ -208,7 +208,7 @@ export default function KiviAgentChat({ onClose }: { onClose: () => void }) {
           maxLength={1000}
           placeholder="Ask about products, safety, delivery..."
           aria-label="Type your message"
-          className="flex-1 border border-kivi-gray-light bg-kivi-surface px-3 py-2 text-sm rounded-kivi focus:outline-none focus:border-kivi-cyan text-kivi-white placeholder:text-kivi-mid"
+          className="flex-1 border border-kivi-gray-light bg-black/25 px-3 py-2 text-sm rounded-kivi focus:outline-none focus:border-kivi-cyan text-[var(--panel-text)] placeholder:text-[var(--panel-muted)]"
         />
         <button
           type="submit"

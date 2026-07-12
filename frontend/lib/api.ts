@@ -19,17 +19,22 @@ function normalizeBlogPosts(data: BlogListResponse | null | undefined): BlogPost
   return []
 }
 
-async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
+async function apiRequest<T>(path: string, options: RequestInit = {}, { forwardAuth = false }: { forwardAuth?: boolean } = {}): Promise<T> {
   const baseUrl = getApiUrl()
   const url = `${baseUrl}${path}`
 
-  // Extract admin token from cookie: client-side via document.cookie,
-  // server-side (Server Components/route handlers) via next/headers
+  // Extract admin token from cookie: client-side via document.cookie (cheap,
+  // never affects rendering mode), server-side (Server Components/route
+  // handlers) via next/headers — but next/headers' cookies() marks the
+  // calling route as dynamic even when caught in a try/catch, which breaks
+  // static/ISR rendering for public pages. Only touch it server-side when a
+  // caller explicitly opts in (i.e. admin-only server components that
+  // genuinely need the staff-only view and are dynamic anyway).
   let token = ''
   if (typeof window !== 'undefined') {
     const match = document.cookie.match(/(?:^|; )admin_token=([^;]*)/)
     token = match ? decodeURIComponent(match[1]) : ''
-  } else {
+  } else if (forwardAuth) {
     try {
       const { cookies } = await import('next/headers')
       const cookieStore = await cookies()
@@ -74,7 +79,7 @@ async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T
 
 export const api = {
   // Products
-  async getProducts(params: Record<string, string | number> = {}): Promise<{ results: Product[]; count: number }> {
+  async getProducts(params: Record<string, string | number> = {}, opts: { forwardAuth?: boolean } = {}): Promise<{ results: Product[]; count: number }> {
     const query = new URLSearchParams()
     Object.entries(params).forEach(([key, val]) => {
       if (val !== undefined && val !== null && val !== '') {
@@ -82,7 +87,7 @@ export const api = {
       }
     })
     const queryStr = query.toString()
-    return apiRequest<{ results: Product[]; count: number }>(`/products/${queryStr ? `?${queryStr}` : ''}`)
+    return apiRequest<{ results: Product[]; count: number }>(`/products/${queryStr ? `?${queryStr}` : ''}`, {}, opts)
   },
 
   async getProduct(slug: string): Promise<Product> {
@@ -102,8 +107,8 @@ export const api = {
   },
 
   // Categories
-  async getCategories(): Promise<Category[]> {
-    return apiRequest<Category[]>('/products/categories/')
+  async getCategories(opts: { forwardAuth?: boolean } = {}): Promise<Category[]> {
+    return apiRequest<Category[]>('/products/categories/', {}, opts)
   },
 
   async getCategory(slug: string): Promise<Category> {
@@ -116,8 +121,8 @@ export const api = {
   },
 
   // Blog
-  async getBlogPosts(): Promise<BlogPost[]> {
-    const data = await apiRequest<BlogListResponse>(API_ENDPOINTS.blog.posts)
+  async getBlogPosts(opts: { forwardAuth?: boolean } = {}): Promise<BlogPost[]> {
+    const data = await apiRequest<BlogListResponse>(API_ENDPOINTS.blog.posts, {}, opts)
     return normalizeBlogPosts(data)
   },
 

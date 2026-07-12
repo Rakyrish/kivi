@@ -26,6 +26,7 @@ services:
     env_file: .env
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.production
+      FRONTEND_INTERNAL_URL: http://frontend:3000
     depends_on:
       db:
         condition: service_healthy

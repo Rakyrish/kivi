@@ -59,7 +59,7 @@ export default function GlobalSearch() {
   return (
     <div className="relative hidden lg:block w-72">
       <div className="relative">
-        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#00A0C0]" />
+        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--kivi-cyan)]" />
         <input
           value={query}
           onChange={(event) => {
@@ -68,7 +68,7 @@ export default function GlobalSearch() {
           }}
           onFocus={() => setIsOpen(true)}
           placeholder="Search chemicals, CAS, insights"
-          className="nav-surface w-full rounded-kivi-sm border border-[#00A0C0]/20 bg-[#081525] py-2.5 pl-9 pr-9 text-xs text-[#F4F7FA] placeholder-[#94A3B8] outline-none transition-colors focus:border-[#00A0C0]"
+          className="nav-surface w-full rounded-kivi-sm border border-[var(--border-input)] py-2.5 pl-9 pr-9 text-xs text-[var(--text-primary)] placeholder-[var(--text-secondary)] outline-none transition-colors focus:border-[var(--kivi-cyan)]"
         />
         {query && (
           <button
@@ -77,7 +77,7 @@ export default function GlobalSearch() {
               setQuery('')
               setIsOpen(false)
             }}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#00A0C0]"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] hover:text-[var(--kivi-cyan)]"
             aria-label="Clear search"
           >
             <X size={14} />
@@ -86,10 +86,10 @@ export default function GlobalSearch() {
       </div>
 
       {isOpen && query.trim().length >= 2 && (
-        <div className="absolute right-0 top-12 z-50 w-[28rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-kivi border border-[#00A0C0]/25 bg-[#081525] shadow-2xl">
+        <div className="absolute right-0 top-12 z-50 w-[28rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-kivi border border-[var(--border-default)] bg-[var(--bg-dropdown)] shadow-2xl">
           <div className="max-h-96 overflow-y-auto p-3">
             {!hasResults && (
-              <p className="px-3 py-4 text-xs text-[#94A3B8]">No matching products, categories, or insights.</p>
+              <p className="px-3 py-4 text-xs text-[var(--text-secondary)]">No matching products, categories, or insights.</p>
             )}
 
             {results.products.length > 0 && (
@@ -143,7 +143,7 @@ export default function GlobalSearch() {
 function SearchGroup({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="py-2">
-      <div className="px-3 pb-1 text-[9px] uppercase tracking-widest text-[#00A0C0]">{title}</div>
+      <div className="px-3 pb-1 text-[9px] uppercase tracking-widest text-[var(--kivi-cyan)]">{title}</div>
       <div className="space-y-1">{children}</div>
     </div>
   )
@@ -164,10 +164,10 @@ function SearchLink({
     <Link
       href={href}
       onClick={onClick}
-      className="block rounded-kivi-sm px-3 py-2 text-xs text-[#F4F7FA] transition-colors hover:bg-[#00A0C0]/10"
+      className="block rounded-kivi-sm px-3 py-2 text-xs text-[var(--text-primary)] transition-colors hover:bg-[var(--kivi-cyan-muted)]"
     >
       <span className="block truncate">{label}</span>
-      <span className="font-mono text-[10px] text-[#94A3B8]">{meta}</span>
+      <span className="font-mono text-[10px] text-[var(--text-secondary)]">{meta}</span>
     </Link>
   )
 }

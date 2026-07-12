@@ -1,5 +1,6 @@
 import io
 import os
+import requests
 from celery import shared_task
 from django.conf import settings
 from django.core.files.base import ContentFile
@@ -9,7 +10,32 @@ from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Image as RLImage
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.pdfgen import canvas
-from .models import Product, SiteSetting, TechnicalDataSheet
+from .models import Product, TechnicalDataSheet
+
+
+@shared_task(name="apps.products.tasks.trigger_revalidation_task")
+def trigger_revalidation_task(paths):
+    """
+    Tells the Next.js frontend to drop its ISR cache for `paths` so a just
+    created/renamed/deleted product or category is servable immediately,
+    instead of waiting for the next full frontend deploy. Without this, a
+    slug that didn't exist at the last `next build` gets a `notFound()`
+    response that Next.js then caches as if it were a real static page
+    forever — the exact bug that produced ~140 dead product URLs in the
+    live sitemap before this task existed.
+    """
+    secret = settings.REVALIDATE_SECRET
+    if not secret:
+        return "Skipped: REVALIDATE_SECRET is not configured."
+    try:
+        resp = requests.post(
+            f"{settings.FRONTEND_INTERNAL_URL}/api/revalidate",
+            json={"secret": secret, "paths": paths},
+            timeout=5,
+        )
+        return f"Revalidation request for {paths} -> {resp.status_code}"
+    except requests.RequestException as e:
+        return f"Revalidation request for {paths} failed: {e}"
 
 
 class NumberedCanvas(canvas.Canvas):
@@ -85,7 +111,7 @@ def regenerate_product_content(product_id, use_web_search=False):
 
     Raises on generation failure (the Celery wrapper retries; sync callers surface it).
     """
-    from apps.ai_generator.generation import generate_product_content, CONTENT_FIELDS, IDENTITY_FIELDS
+    from apps.ai_generator.generation import generate_product_content, CONTENT_FIELDS, IDENTITY_FIELDS, is_placeholder_value
     from apps.analytics.utils import log_ai_action
 
     try:
@@ -130,8 +156,12 @@ def regenerate_product_content(product_id, use_web_search=False):
     for field in CONTENT_FIELDS:
         setattr(product, field, content[field])
     # Identity facts: only fill blanks — never overwrite verified chemistry data.
+    # A stored "N/A" / "Information requires manual verification." isn't a verified
+    # fact, it's a prior placeholder — treat it as blank so a regeneration that
+    # finally resolves the real value (e.g. via web search) can actually save it.
     for field in IDENTITY_FIELDS:
-        if not getattr(product, field):
+        current = getattr(product, field)
+        if not current or is_placeholder_value(current):
             setattr(product, field, content[field])
 
     product.ai_generated = True

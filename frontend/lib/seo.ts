@@ -16,8 +16,15 @@ export function buildMetadata({
   path?: string
   type?: 'website' | 'article'
 }): Metadata {
-  const fullTitle = title
-    ? `${title} | ${SITE.shortName}`
+  // Backend-generated seo_title values (products/categories/blog posts) sometimes
+  // already end with "| {shortName}" baked in by the AI content pipeline. Strip it
+  // before re-appending so we never double/triple the suffix, and return `absolute`
+  // below so the root layout's own `%s | {shortName}` template doesn't add another.
+  const suffix = ` | ${SITE.shortName}`
+  const cleanTitle = title?.endsWith(suffix) ? title.slice(0, -suffix.length) : title
+
+  const fullTitle = cleanTitle
+    ? `${cleanTitle} | ${SITE.shortName}`
     : `${SITE.name} — ${SITE.tagline}`
 
   const desc = description || SITE.description
@@ -26,7 +33,7 @@ export function buildMetadata({
   const ogImage = image || `${SITE.url}/kivi.jpeg`
 
   return {
-    title: fullTitle,
+    title: { absolute: fullTitle },
     description: desc,
     keywords: keywords || SITE.keywords,
     metadataBase: new URL(SITE.url),

@@ -23,7 +23,10 @@ export default async function ProductsPage({
   const initialCategory = resolvedSearchParams?.category || ''
   const initialSearch = resolvedSearchParams?.search || ''
 
-  try { const res = await api.getProducts({ page_size: 150 }); products = res.results || [] } catch {}
+  // page_size is capped server-side (see ProductPagination.max_page_size) — 500
+  // comfortably covers the full catalogue so CatalogueClient's client-side
+  // filtering/pagination has the complete product set to work with.
+  try { const res = await api.getProducts({ page_size: 500 }); products = res.results || [] } catch {}
   try { categories = await api.getCategories() } catch {}
 
   return (

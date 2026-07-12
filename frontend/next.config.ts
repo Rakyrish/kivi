@@ -29,10 +29,13 @@ const nextConfig: NextConfig = {
       },
     ]
   },
-  // ISR revalidation secret
-  env: {
-    REVALIDATE_SECRET: process.env.REVALIDATE_SECRET || '',
-  },
+  // Deliberately no `env: { REVALIDATE_SECRET }` block here: that config option
+  // inlines the value as a build-time constant (like NEXT_PUBLIC_ vars), and
+  // REVALIDATE_SECRET is only ever injected at container *runtime* via
+  // docker-compose's env_file — inlining it baked in an empty string at image
+  // build time and silently broke every revalidation call. The Node.js runtime
+  // Route Handler in app/api/revalidate/route.ts reads process.env directly at
+  // request time instead, which sees the real value.
 }
 
 export default nextConfig
