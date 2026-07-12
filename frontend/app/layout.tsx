@@ -87,7 +87,11 @@ export default function RootLayout({
         <link rel="preconnect" href="https://res.cloudinary.com" />
         <link rel="dns-prefetch" href="https://res.cloudinary.com" />
       </head>
-      <body className="antialiased min-h-screen flex flex-col font-sans" style={{ background: 'var(--bg-page)' }}>
+      <body
+        className="antialiased min-h-screen flex flex-col font-sans"
+        style={{ background: 'var(--bg-page)' }}
+        suppressHydrationWarning
+      >
         <Script id="kivi-theme-init" strategy="beforeInteractive">
           {`
             (function () {

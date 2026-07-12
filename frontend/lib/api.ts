@@ -152,6 +152,38 @@ export const api = {
     })
   },
 
+  async submitInquiry(formData: FormData): Promise<ContactSubmission> {
+    return apiRequest<ContactSubmission>('/contacts/', {
+      method: 'POST',
+      body: formData,
+    })
+  },
+
+  async getInquiries(
+    params: Record<string, string | number> = {},
+    opts: { forwardAuth?: boolean } = {}
+  ): Promise<{ results: ContactSubmission[]; count: number }> {
+    const query = new URLSearchParams()
+    Object.entries(params).forEach(([key, val]) => {
+      if (val !== undefined && val !== null && val !== '') {
+        query.set(key, String(val))
+      }
+    })
+    const queryStr = query.toString()
+    return apiRequest<{ results: ContactSubmission[]; count: number }>(`/contacts/${queryStr ? `?${queryStr}` : ''}`, {}, opts)
+  },
+
+  async getInquiry(id: number | string, opts: { forwardAuth?: boolean } = {}): Promise<ContactSubmission> {
+    return apiRequest<ContactSubmission>(`/contacts/${id}/`, {}, opts)
+  },
+
+  async updateInquiryStatus(id: number | string, status: string): Promise<ContactSubmission> {
+    return apiRequest<ContactSubmission>(`/contacts/${id}/`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    })
+  },
+
   async submitQuoteRequest(data: Record<string, unknown>): Promise<void> {
     return apiRequest<void>(API_ENDPOINTS.leads.quoteRequests, {
       method: 'POST',

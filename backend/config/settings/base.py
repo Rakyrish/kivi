@@ -188,8 +188,15 @@ GOOGLE_SERVICE_ACCOUNT_JSON = os.environ.get('GOOGLE_SERVICE_ACCOUNT_JSON', '')
 
 # Email setup
 EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+EMAIL_HOST = os.environ.get('EMAIL_HOST', '')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
+EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'False') == 'True'
 RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
 FROM_EMAIL = os.environ.get('FROM_EMAIL', 'info@kivichemicals.com')
+DEFAULT_FROM_EMAIL = FROM_EMAIL
 
 # Celery configurations
 CELERY_BROKER_URL = os.environ.get('REDIS_URL', 'redis://redis:6379/1')

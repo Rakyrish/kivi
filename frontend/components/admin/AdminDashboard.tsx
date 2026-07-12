@@ -357,12 +357,12 @@ export default function AdminDashboardPage() {
   return (
     <div className="space-y-6 animate-fade-in text-[var(--text-primary)]">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="font-display font-black text-2xl uppercase tracking-wide" style={{ color: 'var(--text-primary)' }}>
-            Enterprise Command Center
+          <h1 className="font-display font-black text-xl sm:text-2xl uppercase tracking-wide" style={{ color: 'var(--text-primary)' }}>
+            Command Center
           </h1>
-          <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+          <p className="text-xs mt-1 hidden sm:block" style={{ color: 'var(--text-muted)' }}>
             Real-time analytics, background workers, and technical search positioning.
           </p>
         </div>
@@ -370,23 +370,23 @@ export default function AdminDashboardPage() {
         <button
           onClick={handleRefresh}
           disabled={refreshing}
-          className="inline-flex items-center gap-2 px-3 py-2 text-xs font-bold uppercase tracking-wider rounded-[2px] border transition-all"
+          className="inline-flex items-center gap-2 px-3 py-2 text-xs font-bold uppercase tracking-wider rounded-[2px] border transition-all shrink-0"
           style={{ color: 'var(--kivi-cyan)', borderColor: 'var(--border-input)', background: 'var(--bg-input)' }}
         >
           <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
-          {refreshing ? 'Refreshing...' : 'Refresh Data'}
+          <span className="hidden sm:inline">{refreshing ? 'Refreshing...' : 'Refresh Data'}</span>
         </button>
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex flex-nowrap gap-2 border-b overflow-x-auto" style={{ borderColor: 'var(--border-divider)' }}>
+      <div className="flex flex-nowrap gap-1 border-b overflow-x-auto scrollbar-hide" style={{ borderColor: 'var(--border-divider)' }}>
         {[
           { id: 'overview', label: 'Overview', icon: Activity },
-          { id: 'seo', label: 'SEO Audit', icon: Search },
-          { id: 'performance', label: 'Performance', icon: Gauge },
+          { id: 'seo', label: 'SEO', icon: Search },
+          { id: 'performance', label: 'Perf', icon: Gauge },
           { id: 'inventory', label: 'Inventory', icon: Warehouse },
-          { id: 'errors', label: 'Error Center', icon: Bug, badge: metrics?.counts.unresolved_errors },
-          { id: 'assistant', label: 'AI Assistant', icon: Bot },
+          { id: 'errors', label: 'Errors', icon: Bug, badge: metrics?.counts.unresolved_errors },
+          { id: 'assistant', label: 'AI', icon: Bot },
           { id: 'security', label: 'Security', icon: ShieldAlert },
         ].map((tab) => {
           const Icon = tab.icon
@@ -395,14 +395,15 @@ export default function AdminDashboardPage() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as TabType)}
-              className="flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 -mb-[1px] transition-all relative"
+              title={tab.label}
+              className="flex items-center gap-1.5 px-3 sm:px-4 py-2.5 text-[10px] sm:text-xs font-bold uppercase tracking-wider border-b-2 -mb-[1px] transition-all relative shrink-0"
               style={{
                 borderColor: active ? 'var(--kivi-cyan)' : 'transparent',
                 color: active ? 'var(--kivi-cyan)' : 'var(--text-secondary)',
               }}
             >
               <Icon size={14} />
-              {tab.label}
+              <span className="hidden sm:inline">{tab.label}</span>
               {tab.badge ? (
                 <span className="absolute -top-1 -right-1 text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center" style={{ background: 'var(--kivi-error)', color: '#fff' }}>{tab.badge}</span>
               ) : null}
@@ -416,7 +417,7 @@ export default function AdminDashboardPage() {
         {/* ── 1. Overview Tab ── */}
         {activeTab === 'overview' && (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <div className="theme-card p-6 rounded-[4px] flex items-center justify-between">
                 <div>
                   <span className="text-[10px] uppercase font-bold tracking-widest block mb-1" style={{ color: 'var(--text-secondary)' }}>Active Catalogue</span>
@@ -440,6 +441,14 @@ export default function AdminDashboardPage() {
                 </div>
                 <BarChart2 className="opacity-40 w-12 h-12" strokeWidth={1} style={{ color: 'var(--kivi-cyan)' }} />
               </div>
+
+              <Link href={ROUTES.admin.inquiries} className="theme-card p-6 rounded-[4px] flex items-center justify-between transition-colors hover:bg-[var(--bg-card-alt)]">
+                <div>
+                  <span className="text-[10px] uppercase font-bold tracking-widest block mb-1" style={{ color: 'var(--text-secondary)' }}>Inquiries</span>
+                  <strong className="text-3xl font-mono" style={{ color: 'var(--text-primary)' }}>{metrics.counts.contacts} Total</strong>
+                </div>
+                <Send className="opacity-40 w-12 h-12" strokeWidth={1} style={{ color: 'var(--kivi-cyan)' }} />
+              </Link>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -478,8 +487,8 @@ export default function AdminDashboardPage() {
                       No search data yet. {metrics.google_search_console.source === 'internal_search' && 'Connect Google Search Console (GSC_SITE_URL + service account) for live organic keyword data.'}
                     </p>
                   ) : (
-                    <div className="rounded overflow-hidden text-xs border" style={{ borderColor: 'var(--border-default)' }}>
-                      <table className="w-full text-left">
+                    <div className="rounded overflow-hidden text-xs border overflow-x-auto" style={{ borderColor: 'var(--border-default)' }}>
+                      <table className="w-full text-left min-w-[400px]">
                         <thead>
                           <tr style={{ background: 'var(--bg-table-head)', borderBottom: '1px solid var(--border-divider)' }}>
                             <th className="px-3 py-2" style={{ color: 'var(--text-secondary)' }}>Query</th>
@@ -596,7 +605,7 @@ export default function AdminDashboardPage() {
                 <h3 className="font-display font-bold text-sm uppercase tracking-wider border-b pb-3" style={{ color: 'var(--kivi-cyan)', borderColor: 'var(--border-divider)' }}>
                   Task Orchestration
                 </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
                   {quickActions.map(({ label, href, icon: Icon, external }) => (
                     <Link
                       key={label}
@@ -1111,7 +1120,7 @@ export default function AdminDashboardPage() {
 
         {/* ── 5. AI Business Assistant Tab ── */}
         {activeTab === 'assistant' && (
-          <div className="animate-fade-in" style={{ height: '600px', display: 'flex', flexDirection: 'column' }}>
+          <div className="animate-fade-in flex flex-col" style={{ height: 'min(600px, calc(100dvh - 200px))' }}>
             <div className="flex items-center gap-3 pb-4 border-b mb-4" style={{ borderColor: 'var(--border-divider)' }}>
               <Bot size={20} style={{ color: 'var(--kivi-cyan)' }} />
               <div>
@@ -1158,14 +1167,15 @@ export default function AdminDashboardPage() {
                 value={chatInput}
                 onChange={e => setChatInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSendChat()}
-                placeholder="Ask about inventory, errors, revenue, content..." disabled={chatLoading}
-                className="flex-1 px-4 py-2.5 text-xs rounded-[2px] outline-none"
+                placeholder="Ask about inventory, errors, revenue..." disabled={chatLoading}
+                className="flex-1 px-3 py-2.5 text-xs rounded-[2px] outline-none min-w-0"
                 style={{ background: 'var(--bg-input)', border: '1px solid var(--border-input)', color: 'var(--text-primary)' }}
               />
               <button onClick={handleSendChat} disabled={chatLoading || !chatInput.trim()}
-                className="px-4 py-2.5 rounded-[2px] flex items-center gap-2 text-xs font-bold uppercase tracking-wider transition-all"
+                className="px-3 py-2.5 rounded-[2px] flex items-center gap-2 text-xs font-bold uppercase tracking-wider transition-all shrink-0"
                 style={{ background: 'var(--kivi-cyan)', color: '#fff', opacity: chatLoading || !chatInput.trim() ? 0.5 : 1 }}>
-                <Send size={13} /> Send
+                <Send size={13} />
+                <span className="hidden sm:inline">Send</span>
               </button>
             </div>
           </div>

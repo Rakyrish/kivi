@@ -452,46 +452,47 @@ export default function ProductForm({ initialData, categories, isEdit, aiData }:
       )}
 
       {/* Tab Selector & Actions bar */}
-      <div className="flex items-center justify-between border-b pb-1" style={{ borderColor: 'var(--border-divider)' }}>
-        <div className="flex gap-2">
+      <div className="flex flex-wrap items-center gap-y-2 justify-between border-b pb-2" style={{ borderColor: 'var(--border-divider)' }}>
+        <div className="flex gap-1">
           <button
             type="button"
             onClick={() => setActiveTab('edit')}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors border-b-2"
+            className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors border-b-2"
             style={{
               borderColor: activeTab === 'edit' ? 'var(--kivi-cyan)' : 'transparent',
               color: activeTab === 'edit' ? 'var(--text-primary)' : 'var(--text-muted)',
             }}
           >
             <Edit3 size={13} />
-            Edit Form
+            <span className="hidden sm:inline">Edit Form</span>
+            <span className="sm:hidden">Edit</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('preview')}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors border-b-2"
+            className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors border-b-2"
             style={{
               borderColor: activeTab === 'preview' ? 'var(--kivi-cyan)' : 'transparent',
               color: activeTab === 'preview' ? 'var(--text-primary)' : 'var(--text-muted)',
             }}
           >
             <Eye size={13} />
-            Preview Catalog Page
+            <span className="hidden sm:inline">Preview Catalog Page</span>
+            <span className="sm:hidden">Preview</span>
           </button>
         </div>
 
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={handleRegenerate}
-            disabled={regenLoading || loading}
-            className="inline-flex items-center gap-2 px-3 py-1.5 border rounded-[2px] transition-colors text-[10px] font-bold uppercase tracking-wider disabled:opacity-60"
-            style={{ borderColor: 'var(--border-divider)', color: 'var(--text-secondary)' }}
-          >
-            <RefreshCw size={11} className={regenLoading ? 'animate-spin' : ''} />
-            Regenerate Content
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={handleRegenerate}
+          disabled={regenLoading || loading}
+          className="inline-flex items-center gap-2 px-3 py-1.5 border rounded-[2px] transition-colors text-[10px] font-bold uppercase tracking-wider disabled:opacity-60 shrink-0"
+          style={{ borderColor: 'var(--border-divider)', color: 'var(--text-secondary)' }}
+        >
+          <RefreshCw size={11} className={regenLoading ? 'animate-spin' : ''} />
+          <span className="hidden sm:inline">Regenerate Content</span>
+          <span className="sm:hidden">Regen</span>
+        </button>
       </div>
 
       {activeTab === 'edit' ? (

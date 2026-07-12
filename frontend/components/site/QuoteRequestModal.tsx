@@ -54,7 +54,8 @@ export default function QuoteRequestModal({ product, onClose }: QuoteRequestModa
     try {
       await api.submitContact({
         ...formData,
-        product: product.id,
+        product_interest: product.name,
+        inquiry_type: 'quotation',
         subject: `Quote Request for ${product.name}`,
         message: `Requested quantity: ${formData.quantity}. Message: ${formData.message}`,
       } as any)

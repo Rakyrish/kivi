@@ -1,55 +1,32 @@
-from django.core.mail import send_mail
-from django.conf import settings
-from rest_framework import viewsets, permissions, status
-from rest_framework.response import Response
+from rest_framework import filters, permissions, viewsets
+
 from .models import ContactSubmission
-from .serializers import ContactSubmissionSerializer
+from .serializers import ContactSubmissionSerializer, ContactSubmissionStatusSerializer
 
 
 class ContactSubmissionViewSet(viewsets.ModelViewSet):
     serializer_class = ContactSubmissionSerializer
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['name', 'email', 'company_name', 'subject', 'message', 'reference_number']
+    ordering_fields = ['created_at', 'status']
 
     def get_queryset(self):
-        return ContactSubmission.objects.all()
+        qs = ContactSubmission.objects.all()
+        if self.action == 'list':
+            status_param = self.request.query_params.get('status')
+            if status_param:
+                qs = qs.filter(status=status_param)
+            inquiry_type = self.request.query_params.get('inquiry_type')
+            if inquiry_type:
+                qs = qs.filter(inquiry_type=inquiry_type)
+        return qs
+
+    def get_serializer_class(self):
+        if self.action in ('update', 'partial_update'):
+            return ContactSubmissionStatusSerializer
+        return ContactSubmissionSerializer
 
     def get_permissions(self):
         if self.action == 'create':
             return [permissions.AllowAny()]
         return [permissions.IsAdminUser()]
-
-    def perform_create(self, serializer):
-        instance = serializer.save()
-
-        # Send email notification
-        subject = f"New Inquiry: {instance.subject}"
-        message_body = f"""
-You have received a new inquiry from the Kivi Chemicals website contact form.
-
-Details:
-------------------------------------------
-Name: {instance.name}
-Email: {instance.email}
-Phone: {instance.phone or 'N/A'}
-Company: {instance.company_name or 'N/A'}
-Subject: {instance.subject}
-Date: {instance.created_at}
-
-Message:
-{instance.message}
-------------------------------------------
-        """
-        
-        recipient = getattr(settings, 'COMPANY_EMAIL', 'info@kivichemicals.com')
-        from_email = getattr(settings, 'FROM_EMAIL', 'info@kivichemicals.com')
-
-        try:
-            send_mail(
-                subject=subject,
-                message=message_body,
-                from_email=from_email,
-                recipient_list=[recipient],
-                fail_silently=False,
-            )
-        except Exception as e:
-            # Prevent email errors from blocking the API response
-            pass

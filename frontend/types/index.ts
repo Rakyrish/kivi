@@ -111,6 +111,16 @@ export interface BlogPost {
 }
 
 
+export type InquiryType =
+  | 'quotation'
+  | 'product_info'
+  | 'technical_support'
+  | 'bulk_order'
+  | 'partnership'
+  | 'general'
+
+export type InquiryStatus = 'new' | 'in_progress' | 'replied' | 'closed'
+
 export interface ContactSubmission {
   id?: number
   name: string
@@ -120,4 +130,13 @@ export interface ContactSubmission {
   subject: string
   message: string
   created_at?: string
+  reference_number?: string
+  inquiry_type?: InquiryType
+  country?: string
+  product_interest?: string
+  quantity?: string
+  attachment_url?: string
+  attachment_filename?: string
+  status?: InquiryStatus
+  updated_at?: string
 }

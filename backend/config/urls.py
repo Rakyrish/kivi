@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework.authtoken.views import ObtainAuthToken
+from rest_framework.parsers import JSONParser, FormParser, MultiPartParser
 from apps.seo.views import SitemapView, RobotsView, SEOAuditView, ContentQualityAuditView
 
 
@@ -12,8 +13,13 @@ class LoginView(ObtainAuthToken):
     authenticates that session and then enforces CSRF on this request - which
     fails because the frontend never sends a CSRF token for this token-auth
     flow, turning a normal login attempt into a 403.
+
+    JSONParser is added here because ObtainAuthToken's default parsers only
+    include FormParser/MultiPartParser — the frontend POSTs application/json,
+    so without JSONParser the body is unparseable and DRF returns 400.
     """
     authentication_classes = []
+    parser_classes = [JSONParser, FormParser, MultiPartParser]
 
 
 urlpatterns = [

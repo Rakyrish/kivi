@@ -6,7 +6,7 @@ import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
   Menu, X, ArrowRight, ChevronDown, FlaskConical, Droplets, Zap,
-  Leaf, Building2, TestTubes, Package, Waves
+  Leaf, Building2, TestTubes, Package, Waves, Phone
 } from 'lucide-react'
 import { ROUTES, SITE } from '@/lib/constants'
 import { api } from '@/lib/api'
@@ -261,6 +261,21 @@ export default function Navbar() {
           {/* ── Desktop CTA ── */}
           <div className="hidden lg:flex items-center gap-3 flex-shrink-0">
             <ThemeToggle />
+            {SITE.phone && (
+              <a
+                href={`tel:${SITE.phone}`}
+                aria-label={`Call us at ${SITE.phone}`}
+                className="inline-flex items-center gap-2 px-3 py-2 text-xs font-bold rounded-[2px] transition-all duration-200 border"
+                style={{
+                  color: 'var(--kivi-cyan)',
+                  borderColor: 'var(--kivi-cyan)',
+                  background: 'var(--kivi-cyan-muted)',
+                }}
+              >
+                <Phone size={13} />
+                <span className="hidden xl:inline">{SITE.phone}</span>
+              </a>
+            )}
             <Link
               href={ROUTES.contact}
               className="inline-flex items-center gap-2 px-5 py-2.5 text-xs uppercase tracking-wider font-bold rounded-[2px] transition-all duration-300"
@@ -353,7 +368,18 @@ export default function Navbar() {
               )
             })}
 
-            <div className="pt-3 mt-3" style={{ borderTop: '1px solid var(--border-divider)' }}>
+            <div className="pt-3 mt-3 space-y-2" style={{ borderTop: '1px solid var(--border-divider)' }}>
+              {SITE.phone && (
+                <a
+                  href={`tel:${SITE.phone}`}
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center justify-center gap-2 w-full py-3 text-sm font-bold rounded-[2px] border transition-all"
+                  style={{ color: 'var(--kivi-cyan)', borderColor: 'var(--kivi-cyan)', background: 'var(--kivi-cyan-muted)' }}
+                >
+                  <Phone size={15} />
+                  {SITE.phone}
+                </a>
+              )}
               <Link
                 href={ROUTES.contact}
                 onClick={() => setMobileOpen(false)}

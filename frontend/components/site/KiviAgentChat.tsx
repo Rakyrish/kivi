@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Bot, Send, X, Phone, Mail, MessageCircle, FlaskConical } from 'lucide-react'
+import { Bot, Send, X, Phone, Mail, MessageCircle, FlaskConical, ClipboardList } from 'lucide-react'
 import { api } from '@/lib/api'
 import { SITE } from '@/lib/constants'
 
@@ -67,6 +67,13 @@ function ContactOptions() {
           Send Email Inquiry
         </a>
       )}
+      <Link
+        href="/contact#inquiry-form"
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-kivi bg-kivi-cyan-muted text-kivi-cyan border border-kivi-cyan hover:bg-kivi-cyan hover:text-kivi-navy transition-all"
+      >
+        <ClipboardList className="w-3.5 h-3.5" />
+        Fill Out Inquiry Form
+      </Link>
     </div>
   )
 }

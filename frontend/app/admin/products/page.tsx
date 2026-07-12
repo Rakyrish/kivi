@@ -32,20 +32,20 @@ export default async function AdminProductsPage({
   const totalPages = Math.max(1, Math.ceil(count / PAGE_SIZE))
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="font-display font-black text-2xl uppercase tracking-wide" style={{ color: 'var(--text-primary)' }}>Products</h1>
+          <h1 className="font-display font-black text-xl sm:text-2xl uppercase tracking-wide" style={{ color: 'var(--text-primary)' }}>Products</h1>
           <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{count} products in catalogue</p>
         </div>
         <Link
           href={ROUTES.admin.productNew}
-          className="inline-flex items-center gap-2 px-5 py-2.5 transition-colors text-xs font-bold uppercase tracking-wider rounded-[2px]"
+          className="inline-flex items-center gap-2 px-3 sm:px-5 py-2.5 transition-colors text-xs font-bold uppercase tracking-wider rounded-[2px] shrink-0"
           style={{ background: 'var(--kivi-cyan)', color: '#002040' }}
         >
           <Plus size={14} />
-          Add Product
+          <span className="hidden sm:inline">Add Product</span>
         </Link>
       </div>
 

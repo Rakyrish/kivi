@@ -442,6 +442,13 @@ select.theme-input option {
 ::-webkit-scrollbar-track { background: var(--border-divider); }
 ::-webkit-scrollbar-thumb { background: var(--kivi-cyan); border-radius: 3px; }
 
+/* Utility: hide scrollbar visually but keep scrollability */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+
 /* ── Selection ── */
 ::selection {
   background-color: rgba(0,160,192,0.25);

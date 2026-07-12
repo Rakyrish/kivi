@@ -47,6 +47,8 @@ export const ROUTES = {
     blog: '/admin/blog',
     blogNew: '/admin/blog/new',
     blogEdit: (slug: string) => `/admin/blog/${slug}/edit`,
+    inquiries: '/admin/inquiries',
+    inquiryDetail: (id: number | string) => `/admin/inquiries/${id}`,
     django: '/django-admin/',
   },
 } as const

@@ -1,3 +1,4 @@
+import { Toaster } from 'sonner'
 import Navbar from '@/components/site/Navbar'
 import Footer from '@/components/site/Footer'
 import FloatingContactCenter from '@/components/site/FloatingContactCenter'
@@ -15,6 +16,7 @@ export default function SiteLayout({
       </main>
       <Footer />
       <FloatingContactCenter />
+      <Toaster position="top-right" richColors closeButton />
     </>
   )
 }

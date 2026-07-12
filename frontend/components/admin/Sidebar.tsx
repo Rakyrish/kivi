@@ -2,43 +2,37 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, Beaker, FileText, Settings, LogOut, ArrowLeft } from 'lucide-react'
+import { LayoutDashboard, Beaker, FileText, Inbox, LogOut, ArrowLeft } from 'lucide-react'
 import { ROUTES, SITE } from '@/lib/constants'
 import ThemeToggle from '@/components/site/ThemeToggle'
 
-export default function Sidebar() {
+interface SidebarProps {
+  onClose?: () => void
+}
 
+export default function Sidebar({ onClose }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
 
   const links = [
     { name: 'Dashboard', href: ROUTES.admin.dashboard, icon: LayoutDashboard },
     { name: 'Products', href: ROUTES.admin.products, icon: Beaker },
-    // Category management can be managed in Django-admin to keep frontend admin simple and focused on AI product content generation
+    { name: 'Inquiries', href: ROUTES.admin.inquiries, icon: Inbox },
+    // Category management can be managed in Django-admin to keep frontend admin simple
     { name: 'Blog Posts', href: ROUTES.admin.blog, icon: FileText },
   ]
 
   const handleLogout = () => {
-    // Clear admin_token cookie
     document.cookie = 'admin_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;'
     router.push(ROUTES.admin.login)
   }
 
-  const isActive = (href: string) => {
-    return pathname === href || pathname.startsWith(href + '/')
-  }
+  const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
 
   return (
-    <aside 
-      className="w-64 border-r flex flex-col min-h-screen transition-colors duration-200"
-      style={{
-        background: 'var(--bg-card)',
-        borderColor: 'var(--border-divider)',
-        color: 'var(--text-secondary)'
-      }}
-    >
+    <div className="flex flex-col h-full">
       {/* Brand Header */}
-      <div className="p-6 border-b flex flex-col gap-1" style={{ borderColor: 'var(--border-divider)' }}>
+      <div className="px-6 py-5 border-b flex flex-col gap-1" style={{ borderColor: 'var(--border-divider)' }}>
         <span className="font-display font-black text-lg tracking-wider uppercase" style={{ color: 'var(--text-primary)' }}>
           {SITE.shortName} Admin
         </span>
@@ -48,7 +42,7 @@ export default function Sidebar() {
       </div>
 
       {/* Nav List */}
-      <nav className="flex-grow p-4 space-y-1.5">
+      <nav className="flex-grow p-4 space-y-1" role="navigation" aria-label="Admin navigation">
         {links.map((link) => {
           const Icon = link.icon
           const active = isActive(link.href)
@@ -56,6 +50,7 @@ export default function Sidebar() {
             <Link
               key={link.name}
               href={link.href}
+              onClick={onClose}
               className="flex items-center gap-3 px-4 py-3 text-xs uppercase tracking-wider font-bold transition-all rounded-[2px]"
               style={{
                 background: active ? 'var(--kivi-cyan)' : 'transparent',
@@ -83,13 +78,18 @@ export default function Sidebar() {
 
       {/* Footer / Actions */}
       <div className="p-4 border-t space-y-2" style={{ borderColor: 'var(--border-divider)' }}>
-        <div className="flex items-center justify-between px-4 py-1.5 border border-dashed rounded-[2px] mb-2" style={{ borderColor: 'var(--border-divider)' }}>
-          <span className="text-[10px] uppercase font-black tracking-wider" style={{ color: 'var(--text-muted)' }}>Theme Mode</span>
+        <div
+          className="flex items-center justify-between px-4 py-1.5 border border-dashed rounded-[2px] mb-2"
+          style={{ borderColor: 'var(--border-divider)' }}
+        >
+          <span className="text-[10px] uppercase font-black tracking-wider" style={{ color: 'var(--text-muted)' }}>
+            Theme Mode
+          </span>
           <ThemeToggle />
         </div>
         <Link
           href={ROUTES.home}
-
+          onClick={onClose}
           className="flex items-center gap-3 px-4 py-3 text-xs uppercase tracking-wider font-bold transition-colors rounded-[2px]"
           style={{ color: 'var(--text-secondary)' }}
           onMouseEnter={(e) => {
@@ -113,7 +113,6 @@ export default function Sidebar() {
           Logout
         </button>
       </div>
-    </aside>
+    </div>
   )
 }
-
