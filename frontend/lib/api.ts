@@ -1,5 +1,5 @@
 import { API_ENDPOINTS, API_URL, INTERNAL_API_URL } from './constants'
-import { Product, Category, SiteSetting, BlogPost, ContactSubmission } from '../types'
+import { Product, Category, SiteSetting, BlogPost, ContactSubmission, InquiryReply } from '../types'
 
 const getApiUrl = () => {
   return typeof window === 'undefined' ? INTERNAL_API_URL : API_URL
@@ -181,6 +181,13 @@ export const api = {
     return apiRequest<ContactSubmission>(`/contacts/${id}/`, {
       method: 'PATCH',
       body: JSON.stringify({ status }),
+    })
+  },
+
+  async replyToInquiry(id: number | string, message: string): Promise<InquiryReply> {
+    return apiRequest<InquiryReply>(`/contacts/${id}/reply/`, {
+      method: 'POST',
+      body: JSON.stringify({ message }),
     })
   },
 

@@ -507,7 +507,7 @@ export default function AIGeneratePanel({ categories, onGenerate }: AIGeneratePa
                   style={{ background: 'var(--kivi-cyan)', color: '#002040', boxShadow: 'var(--shadow-glow-cyan)' }}
                 >
                   <Sparkles size={14} />
-                  Generate Product Copy
+                  Generate Content
                 </button>
               )}
             </div>

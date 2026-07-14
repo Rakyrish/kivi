@@ -4,6 +4,7 @@ import { api } from '@/lib/api'
 import { ROUTES } from '@/lib/constants'
 import { INQUIRY_TYPES } from '@/lib/validation/contactSchema'
 import InquiryStatusControl from '@/components/admin/InquiryStatusControl'
+import InquiryReplyBox from '@/components/admin/InquiryReplyBox'
 
 function inquiryTypeLabel(value?: string) {
   return INQUIRY_TYPES.find((t) => t.value === value)?.label || 'General Inquiry'
@@ -80,6 +81,8 @@ export default async function AdminInquiryDetailPage({
       <div className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
         Submitted: {inquiry.created_at ? new Date(inquiry.created_at).toLocaleString() : '—'}
       </div>
+
+      <InquiryReplyBox id={inquiry.id as number} initialReplies={inquiry.replies || []} />
     </div>
   )
 }

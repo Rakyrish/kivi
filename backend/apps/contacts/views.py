@@ -1,7 +1,15 @@
-from rest_framework import filters, permissions, viewsets
+from rest_framework import filters, permissions, status as http_status, viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
 
 from .models import ContactSubmission
-from .serializers import ContactSubmissionSerializer, ContactSubmissionStatusSerializer
+from .serializers import (
+    ContactSubmissionSerializer,
+    ContactSubmissionStatusSerializer,
+    InquiryReplyCreateSerializer,
+    InquiryReplySerializer,
+)
+from .tasks import send_inquiry_reply_task
 
 
 class ContactSubmissionViewSet(viewsets.ModelViewSet):
@@ -30,3 +38,17 @@ class ContactSubmissionViewSet(viewsets.ModelViewSet):
         if self.action == 'create':
             return [permissions.AllowAny()]
         return [permissions.IsAdminUser()]
+
+    @action(detail=True, methods=['post'])
+    def reply(self, request, pk=None):
+        inquiry = self.get_object()
+        serializer = InquiryReplyCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        reply = serializer.save(
+            inquiry=inquiry,
+            created_by=request.user if request.user.is_authenticated else None,
+        )
+        inquiry.status = 'replied'
+        inquiry.save(update_fields=['status', 'updated_at'])
+        send_inquiry_reply_task.delay(reply.id)
+        return Response(InquiryReplySerializer(reply).data, status=http_status.HTTP_201_CREATED)

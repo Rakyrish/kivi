@@ -4,7 +4,7 @@ import uuid
 import cloudinary.uploader
 from rest_framework import serializers
 
-from .models import ContactSubmission
+from .models import ContactSubmission, InquiryReply
 
 ALLOWED_ATTACHMENT_EXTENSIONS = {'.pdf', '.doc', '.docx', '.xls', '.xlsx', '.jpg', '.jpeg', '.png', '.webp'}
 ALLOWED_ATTACHMENT_MIME_TYPES = {
@@ -20,11 +20,26 @@ ALLOWED_ATTACHMENT_MIME_TYPES = {
 MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024  # 5MB
 
 
+class InquiryReplySerializer(serializers.ModelSerializer):
+    created_by_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = InquiryReply
+        fields = ['id', 'message', 'created_at', 'created_by_name']
+        read_only_fields = fields
+
+    def get_created_by_name(self, obj):
+        if not obj.created_by:
+            return 'Kivi Chemicals Team'
+        return obj.created_by.get_full_name() or obj.created_by.username
+
+
 class ContactSubmissionSerializer(serializers.ModelSerializer):
     attachment = serializers.FileField(write_only=True, required=False, allow_null=True)
     # Phase 2 anti-spam hook: a field bots fill blindly but humans never see
     # (hidden via CSS on the frontend). Inert in Phase 1 — always discarded.
     hp_field = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    replies = InquiryReplySerializer(many=True, read_only=True)
 
     class Meta:
         model = ContactSubmission
@@ -74,3 +89,14 @@ class ContactSubmissionStatusSerializer(serializers.ModelSerializer):
     class Meta:
         model = ContactSubmission
         fields = ['status']
+
+
+class InquiryReplyCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InquiryReply
+        fields = ['message']
+
+    def validate_message(self, value):
+        if not value.strip():
+            raise serializers.ValidationError('Reply message cannot be empty.')
+        return value

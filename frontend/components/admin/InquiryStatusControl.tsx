@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { api } from '@/lib/api'
 
 const STATUS_OPTIONS = [
@@ -13,6 +13,10 @@ const STATUS_OPTIONS = [
 export default function InquiryStatusControl({ id, initialStatus }: { id: number; initialStatus: string }) {
   const [status, setStatus] = useState(initialStatus)
   const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    setStatus(initialStatus)
+  }, [initialStatus])
 
   const handleChange = async (value: string) => {
     setBusy(true)

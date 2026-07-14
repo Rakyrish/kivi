@@ -96,7 +96,7 @@ export default function ContactForm() {
       setSuccess(true)
       reset()
       removeAttachment()
-      toast.success('Inquiry sent — our team will respond within 24 hours.')
+      toast.success('Inquiry sent — our team will respond within a few hours.')
     } catch (err: any) {
       toast.error(err?.message || 'Something went wrong. Please try again.')
     }
@@ -111,7 +111,7 @@ export default function ContactForm() {
         Send Inquiry
       </h3>
       <p className="text-xs mb-6" style={{ color: 'var(--text-secondary)' }}>
-        Fill out the form below. Our chemical sales engineers will respond within 24 hours.
+        Fill out the form below. Our chemical sales engineers will respond within a few hours.
       </p>
 
       <AnimatePresence mode="wait">

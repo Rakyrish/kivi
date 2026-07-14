@@ -59,3 +59,20 @@ class ContactSubmission(models.Model):
                     self.reference_number = candidate
                     break
         super().save(*args, **kwargs)
+
+
+class InquiryReply(models.Model):
+    inquiry = models.ForeignKey(ContactSubmission, on_delete=models.CASCADE, related_name='replies')
+    message = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        'auth.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='inquiry_replies'
+    )
+
+    class Meta:
+        ordering = ['created_at']
+        verbose_name = 'Inquiry Reply'
+        verbose_name_plural = 'Inquiry Replies'
+
+    def __str__(self):
+        return f"Reply to {self.inquiry.reference_number} at {self.created_at:%Y-%m-%d %H:%M:%S}"

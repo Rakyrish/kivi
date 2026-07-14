@@ -35,7 +35,7 @@ export default function ContactPage() {
           </h1>
           <p className="text-xs md:text-sm text-[#94A3B8] max-w-xl leading-relaxed">
             Our chemical specialists are ready to help with product inquiries, quotations, technical support, and
-            recommendations tailored to your industry. Reach out and hear back within 24 business hours.
+            recommendations tailored to your industry. Reach out and hear back within a few hours.
           </p>
           <div className="pt-2">
             <a

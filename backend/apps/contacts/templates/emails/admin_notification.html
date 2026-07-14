@@ -1,0 +1,58 @@
+{% extends "emails/base_email.html" %}
+{% block title %}New Inquiry — {{ inquiry.reference_number }}{% endblock %}
+{% block eyebrow %}New Website Inquiry{% endblock %}
+{% block content %}
+  <h1 style="margin:0 0 14px;font-size:19px;color:#002040;">{{ inquiry.subject }}</h1>
+
+  <p style="margin:0 0 22px;">
+    <span style="display:inline-block;background-color:#E6F6FA;color:#00707F;padding:5px 12px;border-radius:2px;font-size:11px;font-weight:bold;letter-spacing:0.8px;text-transform:uppercase;">
+      Ref: {{ inquiry.reference_number }}
+    </span>
+  </p>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:22px;">
+    <tr>
+      <td style="padding:9px 0;border-bottom:1px solid #e5e9ee;width:34%;color:#5b6b80;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;vertical-align:top;">Name</td>
+      <td style="padding:9px 0;border-bottom:1px solid #e5e9ee;color:#1a2332;font-size:13px;">{{ inquiry.name }}</td>
+    </tr>
+    <tr>
+      <td style="padding:9px 0;border-bottom:1px solid #e5e9ee;color:#5b6b80;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;vertical-align:top;">Company</td>
+      <td style="padding:9px 0;border-bottom:1px solid #e5e9ee;color:#1a2332;font-size:13px;">{{ inquiry.company_name|default:"Not provided" }}</td>
+    </tr>
+    <tr>
+      <td style="padding:9px 0;border-bottom:1px solid #e5e9ee;color:#5b6b80;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;vertical-align:top;">Email</td>
+      <td style="padding:9px 0;border-bottom:1px solid #e5e9ee;font-size:13px;"><a href="mailto:{{ inquiry.email }}" style="color:#00A0C0;text-decoration:none;">{{ inquiry.email }}</a></td>
+    </tr>
+    <tr>
+      <td style="padding:9px 0;border-bottom:1px solid #e5e9ee;color:#5b6b80;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;vertical-align:top;">Phone</td>
+      <td style="padding:9px 0;border-bottom:1px solid #e5e9ee;font-size:13px;">{% if inquiry.phone %}<a href="tel:{{ inquiry.phone }}" style="color:#00A0C0;text-decoration:none;">{{ inquiry.phone }}</a>{% else %}<span style="color:#1a2332;">Not provided</span>{% endif %}</td>
+    </tr>
+    <tr>
+      <td style="padding:9px 0;border-bottom:1px solid #e5e9ee;color:#5b6b80;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;vertical-align:top;">Country</td>
+      <td style="padding:9px 0;border-bottom:1px solid #e5e9ee;color:#1a2332;font-size:13px;">{{ inquiry.country|default:"Not provided" }}</td>
+    </tr>
+    <tr>
+      <td style="padding:9px 0;border-bottom:1px solid #e5e9ee;color:#5b6b80;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;vertical-align:top;">Inquiry Type</td>
+      <td style="padding:9px 0;border-bottom:1px solid #e5e9ee;color:#1a2332;font-size:13px;">{{ inquiry.get_inquiry_type_display }}</td>
+    </tr>
+    <tr>
+      <td style="padding:9px 0;border-bottom:1px solid #e5e9ee;color:#5b6b80;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;vertical-align:top;">Product</td>
+      <td style="padding:9px 0;border-bottom:1px solid #e5e9ee;color:#1a2332;font-size:13px;">{{ inquiry.product_interest|default:"Not specified" }}</td>
+    </tr>
+    <tr>
+      <td style="padding:9px 0;color:#5b6b80;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;vertical-align:top;">Quantity</td>
+      <td style="padding:9px 0;color:#1a2332;font-size:13px;">{{ inquiry.quantity|default:"Not specified" }}</td>
+    </tr>
+  </table>
+
+  <p style="margin:0 0 8px;color:#5b6b80;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;">Message</p>
+  <div style="background-color:#f4f7fa;border-left:3px solid #00A0C0;padding:14px 16px;margin:0 0 24px;color:#1a2332;font-size:13px;line-height:1.6;white-space:pre-wrap;">{{ inquiry.message }}</div>
+
+  {% if inquiry.attachment_url %}
+  <p style="margin:0 0 24px;font-size:13px;">
+    <a href="{{ inquiry.attachment_url }}" style="color:#00A0C0;text-decoration:none;">&#128206; {{ inquiry.attachment_filename|default:"View attachment" }}</a>
+  </p>
+  {% endif %}
+
+  <p style="margin:0;color:#94A3B8;font-size:11px;">Submitted {{ inquiry.created_at|date:"M j, Y, g:i A" }}</p>
+{% endblock %}

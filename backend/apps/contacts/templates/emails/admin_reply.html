@@ -1,0 +1,26 @@
+{% extends "emails/base_email.html" %}
+{% block title %}Re: {{ inquiry.subject }} — {{ inquiry.reference_number }}{% endblock %}
+{% block eyebrow %}A Message From Our Team{% endblock %}
+{% block content %}
+  <h1 style="margin:0 0 16px;font-size:19px;color:#002040;">Dear {{ inquiry.name }},</h1>
+
+  <div style="color:#1a2332;font-size:14px;line-height:1.7;margin-bottom:24px;">
+    {{ reply.message|linebreaksbr }}
+  </div>
+
+  <p style="margin:0 0 24px;">
+    <span style="display:inline-block;background-color:#E6F6FA;color:#00707F;padding:5px 12px;border-radius:2px;font-size:11px;font-weight:bold;letter-spacing:0.8px;text-transform:uppercase;">
+      Ref: {{ inquiry.reference_number }}
+    </span>
+  </p>
+
+  <p style="margin:0;padding-top:18px;border-top:1px solid #e5e9ee;color:#5b6b80;font-size:12px;">
+    Have more questions? Just reply to this email, or call/WhatsApp us at
+    {% if company_phone %}<a href="tel:{{ company_phone }}" style="color:#00A0C0;text-decoration:none;">{{ company_phone }}</a>{% endif %}.
+  </p>
+
+  <p style="margin:22px 0 0;">
+    Best regards,<br>
+    <strong style="color:#002040;">{{ company_name }} Team</strong>
+  </p>
+{% endblock %}

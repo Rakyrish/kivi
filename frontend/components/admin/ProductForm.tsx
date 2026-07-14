@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Plus, Trash2, Save, AlertCircle, CheckCircle, ImageIcon, X, RefreshCw, Eye, Edit3, ShieldAlert } from 'lucide-react'
 import { Product, Category } from '@/types'
 import { api } from '@/lib/api'
+import { hasRealValue } from '@/lib/productDisplay'
 
 interface ProductFormProps {
   initialData?: Product
@@ -110,7 +111,7 @@ export default function ProductForm({ initialData, categories, isEdit, aiData }:
         
         // Also check if any string field has the placeholder text
         Object.entries(aiData).forEach(([key, val]) => {
-          if (typeof val === 'string' && val.includes('Information requires manual verification.')) {
+          if (typeof val === 'string' && val && !hasRealValue(val)) {
             if (!reviewList.includes(key)) {
               reviewList.push(key)
             }
@@ -284,41 +285,10 @@ export default function ProductForm({ initialData, categories, isEdit, aiData }:
     try {
       const saved = await api.saveProduct(formData, isEdit, initialData?.slug)
       setSuccessMsg(isEdit ? 'Product updated successfully.' : 'Product created successfully.')
-      if (!isEdit) {
-        setFormData({
-          name: '',
-          slug: '',
-          category: undefined,
-          chemical_formula: '',
-          cas_number: '',
-          grade: '',
-          un_number: '',
-          brand: '',
-          manufacturer: '',
-          hazard_classification: '',
-          grades_available: [],
-          regulatory_compliance: [],
-          short_description: '',
-          description: '',
-          applications: [],
-          specifications: {},
-          safety_info: '',
-          seo_title: '',
-          seo_description: '',
-          keywords: '',
-          image: '',
-          images: [],
-          is_active: true,
-          is_featured: false,
-          in_stock: true,
-          ai_generated: false,
-        })
-        setImagePreview('')
-        setConfidenceScores({})
-        setRequiresReviewFields([])
-      } else {
-        setFormData(saved)
-      }
+      // Keep the saved data (including anything populated by the AI vision
+      // workflow) visible on screen instead of wiping the form back to blank —
+      // admins need to see what was actually saved, not lose it immediately.
+      setFormData(saved)
     } catch (err: any) {
       setErrorMsg(err.message || 'Failed to save product.')
     } finally {
@@ -388,7 +358,8 @@ export default function ProductForm({ initialData, categories, isEdit, aiData }:
 
   // Helper to determine styling of input with review issues
   const getFieldInputStyle = (name: string) => {
-    const isError = requiresReviewFields.includes(name) || String(formData[name as keyof Product] || '').includes('Information requires manual verification.')
+    const fieldVal = formData[name as keyof Product]
+    const isError = requiresReviewFields.includes(name) || (typeof fieldVal === 'string' && fieldVal.length > 0 && !hasRealValue(fieldVal))
     return {
       ...inputStyle,
       borderColor: isError ? 'var(--kivi-error)' : 'var(--border-input)',
@@ -527,7 +498,7 @@ export default function ProductForm({ initialData, categories, isEdit, aiData }:
                 className={INPUT_CLS}
                 style={getFieldInputStyle('name')}
               />
-              {String(formData.name).includes('Information requires manual verification.') && (
+              {formData.name && !hasRealValue(formData.name) && (
                 <p className="text-[10px]" style={{ color: 'var(--kivi-error)' }}>⚠️ Please provide a valid product name.</p>
               )}
             </div>

@@ -169,6 +169,9 @@ COMPANY_TAGLINE = os.environ.get('COMPANY_TAGLINE', '')
 COMPANY_EMAIL = os.environ.get('COMPANY_EMAIL', '')
 COMPANY_PHONE = os.environ.get('COMPANY_PHONE_NUMBER', '')
 COMPANY_WHATSAPP = os.environ.get('COMPANY_WHATSAPP_NUMBER', '')
+COMPANY_STREET_ADDRESS = os.environ.get('COMPANY_STREET_ADDRESS', '')
+COMPANY_CITY = os.environ.get('COMPANY_CITY', '')
+COMPANY_COUNTRY = os.environ.get('COMPANY_COUNTRY', '')
 
 # OpenAI settings
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')

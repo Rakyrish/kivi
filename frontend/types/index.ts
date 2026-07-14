@@ -121,6 +121,13 @@ export type InquiryType =
 
 export type InquiryStatus = 'new' | 'in_progress' | 'replied' | 'closed'
 
+export interface InquiryReply {
+  id: number
+  message: string
+  created_at: string
+  created_by_name: string
+}
+
 export interface ContactSubmission {
   id?: number
   name: string
@@ -139,4 +146,5 @@ export interface ContactSubmission {
   attachment_filename?: string
   status?: InquiryStatus
   updated_at?: string
+  replies?: InquiryReply[]
 }

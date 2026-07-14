@@ -30,7 +30,7 @@ CONFIDENCE SCORES:
 You must provide a confidence score (from 0 to 100) for every field in a nested dictionary called "confidence_scores".
 - If the field's value in the vision data is verified and present, the confidence score should be 90-100.
 - If it is inferred with moderate certainty, the confidence score should be 50-89.
-- If it is not present or contains "Information requires manual verification.", the confidence score should be 0-50.
+- If it is not present or contains "N/A", the confidence score should be 0-50.
 
 BRAND RULES:
 - Refer to the supplier as "Kivi Chemicals". Mention "Kivi Chemicals" naturally AT LEAST
@@ -63,7 +63,7 @@ QUALITY RULES (strict):
   and regional market realities (East African manufacturing, municipal water utilities,
   mining, agriculture, food processing) where genuinely applicable to THIS chemical.
 - Usefulness beats word count. Hit the target ranges but never pad.
-- Facts must be chemically accurate. If a property does not apply, use "Information requires manual verification." rather than inventing data.
+- Facts must be chemically accurate. If a property does not apply, use "N/A" rather than inventing data.
 - When copying a CAS number or UN number from vision data, transcribe it EXACTLY
   character-for-character. A single mistyped digit produces an invalid, checksum-failing
   registry number for a real chemical — this is checked automatically and undermines buyer
@@ -73,15 +73,15 @@ Return ONLY a valid JSON object with this exact structure — no markdown fences
 preamble, no trailing text:
 {
   "name": "Plain standard chemical/product name only, no geo-suffix, e.g. 'Caustic Soda Flakes'",
-  "brand": "Brand name, or 'Information requires manual verification.' if not in vision data",
-  "manufacturer": "Manufacturer name, or 'Information requires manual verification.' if not in vision data",
-  "grade": "e.g. Industrial Grade / Food Grade / Technical Grade, or 'Information requires manual verification.' if not in vision data",
-  "chemical_formula": "e.g. NaOH, or 'Information requires manual verification.' if not in vision data",
+  "brand": "Brand name, or 'N/A' if not in vision data",
+  "manufacturer": "Manufacturer name, or 'N/A' if not in vision data",
+  "grade": "e.g. Industrial Grade / Food Grade / Technical Grade, or 'N/A' if not in vision data",
+  "chemical_formula": "e.g. NaOH, or 'N/A' if not in vision data",
   "cas_number": "e.g. 1310-73-2 (max 20 chars), or 'N/A' if not in vision data",
   "un_number": "e.g. UN1823 (max 30 chars), or 'N/A' if not in vision data",
-  "purity": "e.g. 99.0% Min, or 'Information requires manual verification.' if not in vision data",
+  "purity": "e.g. 99.0% Min, or 'N/A' if not in vision data",
   "molecular_weight": "e.g. 40.00 g/mol (max 30 chars), or 'N/A' if not in vision data",
-  "appearance": "e.g. White crystalline solid, or 'Information requires manual verification.' if not in vision data",
+  "appearance": "e.g. White crystalline solid, or 'N/A' if not in vision data",
   "suggested_category": "One of: 'Industrial Chemicals', 'Water Treatment Chemicals', 'Food Grade Chemicals', 'Refractory Materials', 'Thermal Insulation', 'Construction Chemicals', or a custom category",
   
   "short_description": "2-3 sentences, max 280 chars, plain language summary based on vision data",
@@ -103,7 +103,7 @@ preamble, no trailing text:
   "specifications": {"Parameter": "Value — populate 6-12 genuinely relevant rows for THIS chemical (e.g. appearance, assay/purity, density, solubility, pH of solution, melting/boiling point, flash point, moisture content, bulk density) — only parameters that are chemically meaningful for this substance, not a fixed checklist applied to every product"},
   "grades_available": [{"grade": "e.g. Food Grade", "note": "Short note on where/why this grade applies, e.g. relevant standard"}],
   "regulatory_compliance": ["e.g. Meets ISO 3696 Grade 2", "e.g. FCC/JECFA food-grade compliant"],
-  "hazard_classification": "Concise GHS classification summary, e.g. 'GHS Category 1B – Corrosive (H314); Signal word: Danger', or 'Not classified as hazardous under GHS' if applicable, or the verification sentence if genuinely unknown",
+  "hazard_classification": "Concise GHS classification summary, e.g. 'GHS Category 1B – Corrosive (H314); Signal word: Danger', or 'Not classified as hazardous under GHS' if applicable, or 'N/A' if genuinely unknown",
 
   "ai_faq": [
     {"question": "FAQ Question", "answer": "FAQ Answer"}
@@ -160,14 +160,10 @@ Do NOT guess or fabricate specifications, grades, chemical formulas, CAS numbers
 
 ANTI-HALLUCINATION RULES:
 - If a field (like chemical_formula, grade, purity, appearance, specifications, packaging, brand, manufacturer, or product name) is not present in the vision data or cannot be determined:
-  Set the field's value exactly to: "Information requires manual verification."
+  Set the field's value exactly to: "N/A"
   Do not attempt to guess or output generic templates.
   Assign a confidence score for that field between 0 and 50.
-- If information is not available, write "Information requires manual verification." instead of inventing data.
-- EXCEPTION — cas_number, un_number, and molecular_weight are short, strictly length-limited
-  database fields (cas_number <= 20 chars, un_number <= 30 chars, molecular_weight <= 30 chars).
-  If these cannot be determined, set the value to exactly "N/A" instead of the long
-  verification sentence. Never exceed these character limits under any circumstance.
+- If information is not available, write "N/A" instead of inventing data.
 """
 
 # Used when there is NO vision_data — the common case when upgrading/regenerating an
@@ -195,9 +191,7 @@ ANTI-HALLUCINATION RULES:
 - Marketing/narrative content (introduction, benefits, FAQ, applications) must still
   stay grounded in real, chemically-accurate facts about this specific substance —
   never invent industry claims, statistics, or regulatory approvals.
-- Only fall back to "Information requires manual verification." (or "N/A" for
-  cas_number/un_number/molecular_weight, which are short length-limited fields
-  <= 20/30/30 chars) if a fact genuinely cannot be determined confidently after
+- Only fall back to "N/A" if a fact genuinely cannot be determined confidently after
   considering all three sources above — e.g. a proprietary or obscure blend with no
   public data. Do not use the placeholder as a default for ordinary, well-documented
   industrial chemicals.
@@ -335,13 +329,15 @@ FIELD_MAX_LENGTHS = {
 # wrong one). If the model overflows these, fall back to its own "unknown" convention
 # instead of emitting a mangled identifier.
 _IDENTITY_OVERFLOW_FALLBACK = {
-    'chemical_formula': 'Information requires manual verification.',
+    'chemical_formula': 'N/A',
     'cas_number': 'N/A',
     'un_number': 'N/A',
     'molecular_weight': 'N/A',
 }
 
 
+# The long sentence is still recognized so older catalogue rows generated before
+# this switch to a plain "N/A" placeholder are still treated as unknown/unverified.
 _PLACEHOLDER_VALUES = {'n/a', 'information requires manual verification.'}
 
 
@@ -565,7 +561,7 @@ def _mock_content(name, vision_data=None):
         "brand": brand,
         "manufacturer": manufacturer,
         "grade": grade,
-        "chemical_formula": "NaOH" if "sodium" in name.lower() else ("H3BO3" if "boric" in name.lower() else "Information requires manual verification."),
+        "chemical_formula": "NaOH" if "sodium" in name.lower() else ("H3BO3" if "boric" in name.lower() else "N/A"),
         "cas_number": "1310-73-2" if "sodium" in name.lower() else ("10043-35-3" if "boric" in name.lower() else "N/A"),
         "un_number": "UN1823" if "sodium" in name.lower() else "N/A",
         "purity": "99.0% Min",
@@ -614,7 +610,7 @@ def _mock_content(name, vision_data=None):
             {"grade": grade, "note": f"Standard commercial grade of {name} stocked by Kivi Chemicals."},
         ],
         "regulatory_compliance": [],
-        "hazard_classification": "Information requires manual verification.",
+        "hazard_classification": "N/A",
         "ai_faq": [
             {"question": f"What grades of {name} does Kivi Chemicals stock?", "answer": f"Industrial and technical grades are held in stock by Kivi Chemicals."}
         ],
