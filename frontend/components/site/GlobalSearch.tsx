@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Search, X } from 'lucide-react'
 import { api } from '@/lib/api'
@@ -17,6 +17,8 @@ export default function GlobalSearch() {
   const [categories, setCategories] = useState<Category[]>([])
   const [posts, setPosts] = useState<BlogPost[]>([])
   const [isOpen, setIsOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     let isMounted = true
@@ -34,6 +36,27 @@ export default function GlobalSearch() {
 
     return () => {
       isMounted = false
+    }
+  }, [])
+
+  useEffect(() => {
+    if (isOpen) inputRef.current?.focus()
+  }, [isOpen])
+
+  useEffect(() => {
+    const onClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsOpen(false)
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onClickOutside)
+      document.removeEventListener('keydown', onKeyDown)
     }
   }, [])
 
@@ -57,36 +80,46 @@ export default function GlobalSearch() {
   const hasResults = results.products.length + results.categories.length + results.posts.length > 0
 
   return (
-    <div className="relative hidden lg:block w-72">
-      <div className="relative">
-        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--kivi-cyan)]" />
-        <input
-          value={query}
-          onChange={(event) => {
-            setQuery(event.target.value)
-            setIsOpen(true)
-          }}
-          onFocus={() => setIsOpen(true)}
-          placeholder="Search chemicals, CAS, insights"
-          className="nav-surface w-full rounded-kivi-sm border border-[var(--border-input)] py-2.5 pl-9 pr-9 text-xs text-[var(--text-primary)] placeholder-[var(--text-secondary)] outline-none transition-colors focus:border-[var(--kivi-cyan)]"
-        />
-        {query && (
-          <button
-            type="button"
-            onClick={() => {
-              setQuery('')
-              setIsOpen(false)
-            }}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] hover:text-[var(--kivi-cyan)]"
-            aria-label="Clear search"
-          >
-            <X size={14} />
-          </button>
-        )}
-      </div>
+    <div ref={containerRef} className="relative hidden lg:block">
+      <button
+        type="button"
+        onClick={() => setIsOpen((v) => !v)}
+        className="inline-flex h-9 w-9 items-center justify-center rounded-[2px] border transition-all duration-200"
+        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-input)', color: 'var(--kivi-cyan)' }}
+        aria-label="Search"
+        aria-expanded={isOpen}
+      >
+        <Search size={16} />
+      </button>
 
-      {isOpen && query.trim().length >= 2 && (
-        <div className="absolute right-0 top-12 z-50 w-[28rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-kivi border border-[var(--border-default)] bg-[var(--bg-dropdown)] shadow-2xl">
+      {isOpen && (
+        <div className="absolute right-0 top-12 z-50 w-[24rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-kivi border border-[var(--border-default)] bg-[var(--bg-dropdown)] shadow-2xl animate-fade-in">
+          <div className="relative p-3 border-b" style={{ borderColor: 'var(--border-divider)' }}>
+            <Search size={15} className="absolute left-6 top-1/2 -translate-y-1/2 text-[var(--kivi-cyan)]" />
+            <input
+              ref={inputRef}
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search chemicals, CAS, insights"
+              className="nav-surface w-full rounded-kivi-sm border border-[var(--border-input)] py-2.5 pl-9 pr-9 text-xs text-[var(--text-primary)] placeholder-[var(--text-secondary)] outline-none transition-colors focus:border-[var(--kivi-cyan)]"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery('')}
+                className="absolute right-6 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] hover:text-[var(--kivi-cyan)]"
+                aria-label="Clear search"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+
+          {query.trim().length < 2 && (
+            <p className="px-6 py-4 text-xs text-[var(--text-secondary)]">Type at least 2 characters to search.</p>
+          )}
+
+          {query.trim().length >= 2 && (
           <div className="max-h-96 overflow-y-auto p-3">
             {!hasResults && (
               <p className="px-3 py-4 text-xs text-[var(--text-secondary)]">No matching products, categories, or insights.</p>
@@ -134,6 +167,7 @@ export default function GlobalSearch() {
               </SearchGroup>
             )}
           </div>
+          )}
         </div>
       )}
     </div>

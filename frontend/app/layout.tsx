@@ -42,9 +42,9 @@ export const metadata: Metadata = {
     google: SITE.analytics.siteVerification,
   },
   icons: {
-    icon: '/kivi.jpeg',
-    shortcut: '/kivi.jpeg',
-    apple: '/kivi.jpeg',
+    icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
+    apple: '/apple-touch-icon.png',
   },
   openGraph: {
     type: 'website',
@@ -54,9 +54,9 @@ export const metadata: Metadata = {
     description: SITE.description,
     images: [
       {
-        url: '/kivi.jpeg',
-        width: 1550,
-        height: 602,
+        url: '/logo-horizontal-white.png',
+        width: 1600,
+        height: 454,
         alt: `${SITE.name} — ${SITE.tagline}`,
       }
     ],
@@ -65,7 +65,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: `${SITE.name} — ${SITE.tagline}`,
     description: SITE.description,
-    images: ['/kivi.jpeg'],
+    images: ['/logo-horizontal-white.png'],
     creator: SITE.social.twitter || '@kivichemicals',
   },
 }

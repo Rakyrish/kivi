@@ -2,7 +2,7 @@ import { SITE } from './constants'
 import { hasRealValue } from './productDisplay'
 
 // Single shared brand image that actually exists in /public
-const BRAND_IMAGE = `${SITE.url}/kivi.jpeg`
+const BRAND_IMAGE = `${SITE.url}/logo-horizontal-white.png`
 
 export function organizationSchema() {
   return {

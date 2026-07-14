@@ -6,7 +6,7 @@ import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
   Menu, X, ArrowRight, ChevronDown, FlaskConical, Droplets, Zap,
-  Leaf, Building2, TestTubes, Package, Waves, Phone
+  Leaf, Building2, TestTubes, Package, Waves, Phone, Mail
 } from 'lucide-react'
 import { ROUTES, SITE } from '@/lib/constants'
 import { api } from '@/lib/api'
@@ -102,38 +102,68 @@ export default function Navbar() {
       }`}
       style={{ borderBottom: '1px solid var(--border-nav)', background: 'var(--bg-nav)' }}
     >
+      {/* ── Utility Bar ── */}
+      <div className="hidden lg:block" style={{ borderBottom: '1px solid var(--border-divider)' }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-3 items-center h-9 text-[11px]">
+            <span className="justify-self-start uppercase tracking-widest font-semibold" style={{ color: 'var(--text-muted)' }}>
+              {SITE.tagline}
+            </span>
+            <div className="justify-self-center hidden xl:flex items-center gap-3">
+              <span className="h-px w-6" style={{ background: 'var(--kivi-cyan)' }} />
+              <span
+                className="uppercase tracking-[0.3em] font-black text-[10px] whitespace-nowrap"
+                style={{ color: 'var(--text-primary)' }}
+              >
+                Kivi Chemicals <span style={{ color: 'var(--kivi-cyan)' }}>Ltd</span>
+              </span>
+              <span className="h-px w-6" style={{ background: 'var(--kivi-cyan)' }} />
+            </div>
+            <div className="justify-self-end flex items-center gap-5" style={{ color: 'var(--text-secondary)' }}>
+              {SITE.email && (
+                <a
+                  href={`mailto:${SITE.email}`}
+                  className="inline-flex items-center gap-1.5 transition-colors hover:text-[var(--kivi-cyan)]"
+                >
+                  <Mail size={12} />
+                  {SITE.email}
+                </a>
+              )}
+              {SITE.phone && (
+                <a
+                  href={`tel:${SITE.phone}`}
+                  className="inline-flex items-center gap-1.5 transition-colors hover:text-[var(--kivi-cyan)]"
+                >
+                  <Phone size={12} />
+                  {SITE.phone}
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between gap-4 h-[72px]">
+        <div className="flex items-center justify-between gap-6 h-[76px]">
 
           {/* ── Logo ── */}
           <div className="flex-shrink-0">
-            <Link href={ROUTES.home} className="flex items-center gap-3 group" aria-label={`${SITE.shortName} home`}>
-              <div className="relative h-11 w-11 overflow-visible rounded-[3px] border border-[var(--border-input)] bg-white flex items-center justify-center shadow-sm transition-all duration-300 group-hover:border-[var(--kivi-cyan)]">
+            <Link href={ROUTES.home} className="flex items-center group" aria-label={`${SITE.shortName} home`}>
+              <div className="h-11 px-3 flex items-center rounded-[3px] border border-[var(--border-input)] bg-white shadow-sm transition-all duration-300 group-hover:border-[var(--kivi-cyan)]">
                 <Image
-                  src="/kivi.jpeg"
+                  src="/logo-horizontal.png"
                   alt="Kivi Chemicals Logo"
-                  fill
-                  sizes="44px"
-                  className="object-contain p-1"
+                  width={1600}
+                  height={454}
+                  className="h-7 w-auto object-contain"
                   priority
                 />
-              </div>
-              <div className="hidden sm:flex flex-col">
-                <span className="font-display text-base tracking-tight leading-none" style={{ color: 'var(--text-primary)' }}>
-                  {SITE.shortName.toUpperCase()}
-                </span>
-                <span className="text-[10px] uppercase tracking-widest font-bold" style={{ color: 'var(--kivi-cyan)' }}>
-                  Chemicals & Solvents
-                </span>
               </div>
             </Link>
           </div>
 
-          {/* ── Global Search ── */}
-          <GlobalSearch />
-
           {/* ── Desktop Navigation ── */}
-          <div className="hidden lg:flex items-center gap-1">
+          <div className="hidden lg:flex flex-1 items-center justify-center gap-1">
             {NAV_LINKS.map((link) => {
               if (link.hasMega) {
                 return (
@@ -258,24 +288,10 @@ export default function Navbar() {
             })}
           </div>
 
-          {/* ── Desktop CTA ── */}
+          {/* ── Desktop Actions ── */}
           <div className="hidden lg:flex items-center gap-3 flex-shrink-0">
+            <GlobalSearch />
             <ThemeToggle />
-            {SITE.phone && (
-              <a
-                href={`tel:${SITE.phone}`}
-                aria-label={`Call us at ${SITE.phone}`}
-                className="inline-flex items-center gap-2 px-3 py-2 text-xs font-bold rounded-[2px] transition-all duration-200 border"
-                style={{
-                  color: 'var(--kivi-cyan)',
-                  borderColor: 'var(--kivi-cyan)',
-                  background: 'var(--kivi-cyan-muted)',
-                }}
-              >
-                <Phone size={13} />
-                <span className="hidden xl:inline">{SITE.phone}</span>
-              </a>
-            )}
             <Link
               href={ROUTES.contact}
               className="inline-flex items-center gap-2 px-5 py-2.5 text-xs uppercase tracking-wider font-bold rounded-[2px] transition-all duration-300"
